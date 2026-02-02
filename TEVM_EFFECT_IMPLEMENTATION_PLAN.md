@@ -2,14 +2,45 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-02 (Post 127th Review - Additional Fixes)
+**Last Updated**: 2026-02-02 (Post 129th Fix)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
 
 ---
 
 ## Review Agent Summary (2026-02-02)
 
-**127th REVIEW.** Parallel Opus 4.5 verification review. Verified 7 issues FIXED. Found 2 MEDIUM, 8 LOW new issues.
+**129th FIX (2026-02-02).** Resolved all 5 HIGH priority Layer error channel declaration issues from 128th review.
+
+**FIXED HIGH Issues (5 total - Layer Error Channel Declarations):**
+- ✅ **#R128-P2-001**: FIXED - EvmLive Layer return type now correctly declares `EvmError` error channel
+- ✅ **#R128-P2-002**: FIXED - BlockchainLive Layer return type now correctly declares `InvalidBlockError` error channel
+- ✅ **#R128-P2-003**: FIXED - BlockchainLocal Layer return type now correctly declares `InvalidBlockError` error channel
+- ✅ **#R128-P2-004**: FIXED - StateManagerLocal Layer return type now correctly declares `NodeNotReadyError` error channel
+- ✅ **#R128-P2-005**: FIXED - StateManagerLive Layer return type now correctly declares `NodeNotReadyError` error channel
+
+**128th REVIEW.** Deep Parallel Opus 4.5 comprehensive review. Found 5 HIGH (now FIXED), 5 MEDIUM, 13 LOW new issues.
+
+**NEW MEDIUM Issues Found (5 total):**
+- 🟡 **#R128-P1-001**: toBaseError template type constraint is incomplete (omits many error types)
+- 🟡 **#R128-P2-006**: VmShape typedef missing error channel on deepCopy
+- 🟡 **#R128-P2-007**: StateManagerShape typedef missing error channel on deepCopy
+- 🟡 **#R128-P2-008**: BlockchainShape typedef missing error channel on deepCopy
+- 🟡 **#R128-P4-001**: getBlockByNumber/getBlockByHash ignore includeTransactions parameter (JSON-RPC non-compliance)
+
+**NEW LOW Issues Found (13 total):**
+- 🟢 **#R128-P1-002**: Inconsistent `name` property passing to `super()` across error classes
+- 🟢 **#R128-P1-003**: LoggerTest with level='silent' creates non-functional test logger
+- 🟢 **#R128-P1-004**: wrapWithEffect does not validate method return types at runtime
+- 🟢 **#R128-P1-005**: toTaggedError errorMap iterations redundant for aliased classes
+- 🟢 **#R128-P1-006**: LoggerLive and LoggerSilent inconsistent API patterns
+- 🟢 **#R128-P1-007**: effectToPromise service error detection is fragile
+- 🟢 **#R128-P1-008**: toTaggedError errorMap uses Object but JSDoc says "Map"
+- 🟢 **#R128-P2-009**: ForkConfigFromRpc missing explicit Layer error type annotation
+- 🟢 **#R128-P2-010**: VmShape ready Effect uses mapEvmError inconsistent with typed error expectations
+- 🟢 **#R128-P3-001**: Storage value NOT padded to 32 bytes inconsistent with key padding
+- 🟢 **#R128-P3-002**: validateHex allows empty hex strings which could cause invalid storageRoot
+- 🟢 **#R128-P3-003**: Test comment mismatch with implementation in SetAccountLive.spec.ts
+- 🟢 **#R128-P4-002**: loadState uses try-catch instead of Effect.try for JSON.parse
 
 **VERIFIED FIXED in 127th Review:**
 - ✅ **#R126-P1-001**: FIXED - AccountNotFoundError now consistent with other error classes
@@ -75,16 +106,284 @@
 
 | Phase | Review Status | Packages | Total Tests | Coverage | RFC Compliance |
 |-------|---------------|----------|-------------|----------|----------------|
-| **Phase 1** | ✅ VERIFIED | 3 (errors-effect, interop, logger-effect) | 695 | 100% | 1 issue FIXED, 3 MEDIUM, 4 LOW remain |
-| **Phase 2** | ✅ VERIFIED | 6 (common, transport, blockchain, state, evm, vm) | 231 | 100% | 4 MEDIUM, 7 LOW remain |
-| **Phase 3** | ✅ VERIFIED | 2 (node-effect, actions-effect) | 219 | 100% | 3 issues FIXED, 1 MEDIUM, 10 LOW remain |
-| **Phase 4** | ✅ VERIFIED | 2 (memory-client-effect, decorators-effect) | 167 | ~97% | 2 MEDIUM, 3 LOW remain |
+| **Phase 1** | ✅ VERIFIED | 3 (errors-effect, interop, logger-effect) | 695 | 100% | 4 MEDIUM, 11 LOW remain |
+| **Phase 2** | ✅ VERIFIED | 6 (common, transport, blockchain, state, evm, vm) | 231 | 100% | 0 HIGH ✅, 7 MEDIUM, 9 LOW remain |
+| **Phase 3** | ✅ VERIFIED | 2 (node-effect, actions-effect) | 219 | 100% | 1 MEDIUM, 13 LOW remain |
+| **Phase 4** | ✅ VERIFIED | 2 (memory-client-effect, decorators-effect) | 167 | ~97% | 3 MEDIUM, 4 LOW remain |
 
-**Open Issues Summary (Post 127th Review - Additional Fixes):**
+**Open Issues Summary (Post 129th Fix):**
 - **CRITICAL**: 0 ✅
-- **HIGH**: 0 ✅
-- **MEDIUM**: 132 🟡 (Previous 135 - 3 FIXED: #R127-P1-001, #R127-P3-001, #R126-P4-004)
-- **LOW**: 338 (Previous 330 + 8 NEW from 127th review)
+- **HIGH**: 0 ✅ (All 5 from 128th review FIXED - Layer type declarations)
+- **MEDIUM**: 137 🟡 (Previous 132 + 5 NEW from 128th review)
+- **LOW**: 351 (Previous 338 + 13 NEW from 128th review)
+
+---
+
+### 128TH REVIEW (2026-02-02) - Deep Parallel Opus 4.5 Comprehensive Review
+
+**Reviewed By**: Claude Opus 4.5 (4 parallel subagents reviewing each phase independently)
+**Scope**: Complete independent deep dive review of all 4 phases focusing on NEW unreviewed issues
+
+---
+
+#### Phase 1: 1 MEDIUM + 7 LOW NEW Issues Found
+
+##### Issue #R128-P1-001: toBaseError template type constraint is incomplete
+**File:Lines**: `packages/errors-effect/src/interop/toBaseError.js:97-99`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: The `@template` JSDoc constraint for `toBaseError` only lists a subset of error types (TevmError, InsufficientBalanceError, OutOfGasError, RevertError, InvalidOpcodeError, StackOverflowError, StackUnderflowError). This omits many error types: InsufficientFundsError, InvalidJumpError, all transport errors (ForkError, NetworkError, TimeoutError), all block errors, all transaction errors, all state errors, all JSON-RPC errors, and all node errors.
+
+**Impact**: TypeScript users passing these omitted error types to `toBaseError` may get incorrect type inference, potentially losing error-specific properties in the return type.
+
+---
+
+##### Issue #R128-P1-002: Inconsistent `name` property passing to `super()` across error classes
+**File:Lines**: Multiple files - AccountNotFoundError.js:101, NetworkError.js:98, ForkError.js:131 (include name) vs TevmError.js:68, RevertError.js:107, BlockNotFoundError.js:100 (don't include)
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Some error classes include `name` in the object passed to `super()`, while others do not. The `Data.TaggedError` base class uses this object for Effect.ts equality and hashing.
+
+**Impact**: Subtle bugs in Effect.ts equality comparisons - two otherwise-identical errors might not be considered `Equal.equals` if one has `name` in its data and the other doesn't.
+
+---
+
+##### Issue #R128-P1-003: LoggerTest with level='silent' creates non-functional test logger
+**File:Lines**: `packages/logger-effect/src/LoggerTest.js:40,65,172-175`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: LoggerTest accepts 'silent' as a valid LogLevel parameter, but this creates a logger that captures nothing. The JSDoc warns about this but the function doesn't provide runtime validation or warning.
+
+**Impact**: Developers might accidentally pass 'silent' and get a test logger that captures nothing, leading to tests that fail to detect expected log output.
+
+---
+
+##### Issue #R128-P1-004: wrapWithEffect does not validate method return types at runtime
+**File:Lines**: `packages/interop/src/wrapWithEffect.js:94-99`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Function wraps methods with Effect.tryPromise expecting Promises, but synchronous methods returning non-Promise values will silently succeed with unexpected behavior rather than failing clearly.
+
+**Impact**: Runtime confusion when developers wrap synchronous methods.
+
+---
+
+##### Issue #R128-P1-005: toTaggedError errorMap iterations redundant for aliased classes
+**File:Lines**: `packages/errors-effect/src/interop/toTaggedError.js:137-141`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The loop over Object.values(errorMap) runs instanceof checks redundantly for aliased classes that appear multiple times.
+
+**Impact**: Minor performance overhead. Could use a Set of unique classes instead.
+
+---
+
+##### Issue #R128-P1-006: LoggerLive and LoggerSilent inconsistent API patterns
+**File:Lines**: `packages/logger-effect/src/LoggerLive.js:58`, `LoggerSilent.js:29`, `LoggerTest.js:86-87`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: LoggerLive('debug') and LoggerTest('info') are functions that take a level, but LoggerSilent is a pre-built Layer with no configuration.
+
+**Impact**: API inconsistency - can't create partially silent logger using LoggerSilent.
+
+---
+
+##### Issue #R128-P1-007: effectToPromise service error detection is fragile
+**File:Lines**: `packages/interop/src/effectToPromise.js:116-118`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Service error detection relies on string matching in error messages ('Service not found', 'is not available'). This is fragile because Effect.ts error messages may change between versions.
+
+**Impact**: Some service access errors may not be caught, leading to less helpful error messages.
+
+---
+
+##### Issue #R128-P1-008: toTaggedError errorMap uses Object but JSDoc says "Map"
+**File:Lines**: `packages/errors-effect/src/interop/toTaggedError.js:44`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The JSDoc comment says "Map of error tags" but the actual implementation is a plain JavaScript Object, not a Map.
+
+**Impact**: Documentation inconsistency.
+
+---
+
+#### Phase 2: 5 HIGH + 3 MEDIUM + 2 LOW NEW Issues Found
+
+##### Issue #R128-P2-001: EvmLive Layer return type incorrectly declares `never` error channel
+**File:Lines**: `packages/evm-effect/src/EvmLive.js:67`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: The JSDoc return type says `Layer.Layer<EvmServiceId, never, ...>` but the implementation uses `Effect.tryPromise` with `mapEvmError` at line 88, meaning the Layer construction can fail with `EvmError`.
+
+**Impact**: Callers providing this Layer in compositions will not see the error type, leading to incorrect error handling assumptions and potential uncaught errors during Layer construction.
+
+---
+
+##### Issue #R128-P2-002: BlockchainLive Layer return type incorrectly declares `never` error channel
+**File:Lines**: `packages/blockchain-effect/src/BlockchainLive.js:75`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: Return type says `Layer.Layer<BlockchainService, never, ...>` but implementation uses `Effect.tryPromise` with `InvalidBlockError` at lines 127 and 134.
+
+**Impact**: Layer composition error handling is broken at the type level.
+
+---
+
+##### Issue #R128-P2-003: BlockchainLocal Layer return type incorrectly declares `never` error channel
+**File:Lines**: `packages/blockchain-effect/src/BlockchainLocal.js:61`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: Return type says `Layer.Layer<BlockchainService, never, CommonService>` but implementation uses `Effect.tryPromise` with `InvalidBlockError` at lines 79 and 88.
+
+**Impact**: Same Layer composition type-safety issue.
+
+---
+
+##### Issue #R128-P2-004: StateManagerLocal Layer return type incorrectly declares `never` error channel
+**File:Lines**: `packages/state-effect/src/StateManagerLocal.js:69`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: Return type says `Layer.Layer<StateManagerService, never, CommonService>` but implementation uses `Effect.tryPromise` with `NodeNotReadyError` at lines 84-91.
+
+**Impact**: Same Layer composition type-safety issue.
+
+---
+
+##### Issue #R128-P2-005: StateManagerLive Layer return type incorrectly declares `never` error channel
+**File:Lines**: `packages/state-effect/src/StateManagerLive.js:86`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: Return type says `Layer.Layer<StateManagerService, never, ...>` but implementation uses `Effect.tryPromise` with `NodeNotReadyError` at lines 130-137.
+
+**Impact**: Same Layer composition type-safety issue.
+
+---
+
+##### Issue #R128-P2-006: VmShape typedef missing error channel on deepCopy
+**File:Lines**: `packages/vm-effect/src/types.js:26`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: VmShape typedef declares `deepCopy: () => Effect<VmShape>` without an error channel, but implementation uses `mapEvmError` which can produce EvmError types.
+
+**Impact**: Type consumers won't expect or handle deepCopy errors.
+
+---
+
+##### Issue #R128-P2-007: StateManagerShape typedef missing error channel on deepCopy
+**File:Lines**: `packages/state-effect/src/types.js:46`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: StateManagerShape typedef declares `deepCopy: () => Effect<StateManagerShape>` without an error channel, but implementations can fail with `InternalError`.
+
+**Impact**: Same type-level mismatch affecting error handling.
+
+---
+
+##### Issue #R128-P2-008: BlockchainShape typedef missing error channel on deepCopy
+**File:Lines**: `packages/blockchain-effect/src/types.js:37`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: BlockchainShape typedef declares `deepCopy: () => Effect<BlockchainShape>` without an error channel, but implementations can fail with `InvalidBlockError`.
+
+**Impact**: Same type-level mismatch issue.
+
+---
+
+##### Issue #R128-P2-009: ForkConfigFromRpc missing explicit Layer error type annotation
+**File:Lines**: `packages/transport-effect/src/ForkConfigFromRpc.js:64-101`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Exported ForkConfigFromRpc layer has no explicit type annotation. While TypeScript may infer correctly, the missing explicit annotation reduces API clarity.
+
+**Impact**: Reduced type documentation clarity.
+
+---
+
+##### Issue #R128-P2-010: VmShape ready Effect uses mapEvmError inconsistent with typed error expectations
+**File:Lines**: `packages/vm-effect/src/VmLive.js:122-125`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The `ready` property uses `mapEvmError` but VmShape typedef declares `ready: Effect<void>` with no error channel.
+
+**Impact**: Type-level mismatch where `ready` can fail but type says it cannot.
+
+---
+
+#### Phase 3: 3 LOW NEW Issues Found
+
+##### Issue #R128-P3-001: Storage value NOT padded to 32 bytes inconsistent with key padding
+**File:Lines**: `packages/actions-effect/src/SetAccountLive.js:336-337`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Storage keys are padded to 32 bytes (`hexToBytes(key, { size: 32 })`) but storage values are NOT padded (`hexToBytes(value)` has no size option). EVM storage slots are 256-bit (32-byte) words.
+
+**Impact**: If StateManagerService.putStorage() expects 32-byte values, shorter values could cause issues.
+
+---
+
+##### Issue #R128-P3-002: validateHex allows empty hex strings which could cause invalid storageRoot
+**File:Lines**: `packages/actions-effect/src/SetAccountLive.js:76-98`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The `validateHex` function regex `/^0x[a-fA-F0-9]*$/` allows empty hex strings like "0x" to pass validation. For `storageRoot` field, this would result in a 0-byte Uint8Array, but storage roots must be exactly 32 bytes.
+
+**Impact**: Errors surface later rather than at validation time.
+
+---
+
+##### Issue #R128-P3-003: Test comment mismatch with implementation in SetAccountLive.spec.ts
+**File:Lines**: `packages/actions-effect/src/SetAccountLive.spec.ts:837`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Test comment states "Value should be 32 bytes (padded)" but implementation does NOT pad values. Test assertion only checks last 2 bytes using `slice(-2)`.
+
+**Impact**: False test confidence about storage value padding.
+
+---
+
+#### Phase 4: 1 MEDIUM + 1 LOW NEW Issues Found
+
+##### Issue #R128-P4-001: getBlockByNumber and getBlockByHash ignore includeTransactions parameter
+**File:Lines**: `packages/decorators-effect/src/EthActionsLive.js:422-424,471-473`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: The `includeTransactions` parameter is checked but both branches (true and false) execute identical code - both return only transaction hashes. When `includeTransactions` is `true`, full transaction objects should be returned.
+
+**Impact**: Clients requesting full transaction data via `eth_getBlockByNumber` or `eth_getBlockByHash` with `includeTransactions: true` will not receive expected transaction details (to, from, value, data, gas, etc.). This breaks JSON-RPC compliance.
+
+---
+
+##### Issue #R128-P4-002: loadState uses try-catch instead of Effect.try for JSON.parse
+**File:Lines**: `packages/decorators-effect/src/TevmActionsLive.js:243-253`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The `loadState` function uses traditional try-catch for `JSON.parse` followed by `yield* Effect.fail()`. This mixes imperative error handling with Effect's declarative patterns.
+
+**Impact**: Code inconsistency with rest of codebase. Doesn't leverage Effect's structured error handling.
 
 ---
 

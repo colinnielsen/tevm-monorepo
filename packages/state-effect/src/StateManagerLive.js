@@ -83,7 +83,7 @@ const toEthjsAddress = (address) => {
  * ```
  *
  * @param {StateManagerLiveOptions} [options] - Configuration options
- * @returns {Layer.Layer<StateManagerService, never, CommonService | TransportService | ForkConfigService>} Layer providing StateManagerService
+ * @returns {Layer.Layer<StateManagerService, NodeNotReadyError, CommonService | TransportService | ForkConfigService>} Layer providing StateManagerService
  */
 export const StateManagerLive = (options = {}) => {
 	return Layer.effect(

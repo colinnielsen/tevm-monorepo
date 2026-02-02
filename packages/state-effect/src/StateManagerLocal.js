@@ -66,7 +66,7 @@ import { createStateManagerShape } from './wrapStateManager.js'
  * ```
  *
  * @param {StateManagerLocalOptions} [options] - Configuration options
- * @returns {Layer.Layer<StateManagerService, never, CommonService>} Layer providing StateManagerService
+ * @returns {Layer.Layer<StateManagerService, NodeNotReadyError, CommonService>} Layer providing StateManagerService
  */
 export const StateManagerLocal = (options = {}) => {
 	return Layer.effect(

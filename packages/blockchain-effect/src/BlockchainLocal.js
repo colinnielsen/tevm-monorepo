@@ -58,7 +58,7 @@ import { BlockchainService } from './BlockchainService.js'
  * ```
  *
  * @param {BlockchainLocalOptions} [options] - Configuration options
- * @returns {Layer.Layer<BlockchainService, never, CommonService>} Layer providing BlockchainService
+ * @returns {Layer.Layer<BlockchainService, InvalidBlockError, CommonService>} Layer providing BlockchainService
  */
 export const BlockchainLocal = (options = {}) => {
 	return Layer.effect(

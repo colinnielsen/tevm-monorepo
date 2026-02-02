@@ -72,7 +72,7 @@ import { BlockchainService } from './BlockchainService.js'
  * ```
  *
  * @param {BlockchainLiveOptions} [options] - Configuration options
- * @returns {Layer.Layer<BlockchainService, never, CommonService | TransportService | ForkConfigService>} Layer providing BlockchainService
+ * @returns {Layer.Layer<BlockchainService, InvalidBlockError, CommonService | TransportService | ForkConfigService>} Layer providing BlockchainService
  */
 export const BlockchainLive = (options = {}) => {
 	return Layer.effect(
