@@ -20,8 +20,8 @@
 
 **128th REVIEW.** Deep Parallel Opus 4.5 comprehensive review. Found 5 HIGH (now FIXED), 5 MEDIUM, 13 LOW new issues.
 
-**NEW MEDIUM Issues Found (5 total - 4 FIXED):**
-- 🟡 **#R128-P1-001**: toBaseError template type constraint is incomplete (omits many error types)
+**NEW MEDIUM Issues Found (5 total - 5 FIXED):**
+- ✅ **#R128-P1-001**: FIXED - toBaseError template now includes all 30 error types (EVM, block, JSON-RPC, node, state, transaction, transport)
 - ✅ **#R128-P2-006**: FIXED - VmShape typedef now declares VmError error channel on deepCopy
 - ✅ **#R128-P2-007**: FIXED - StateManagerShape typedef now declares InternalError error channel on deepCopy
 - ✅ **#R128-P2-008**: FIXED - BlockchainShape typedef now declares InvalidBlockError error channel on deepCopy
@@ -131,7 +131,7 @@
 ##### Issue #R128-P1-001: toBaseError template type constraint is incomplete
 **File:Lines**: `packages/errors-effect/src/interop/toBaseError.js:97-99`
 **Severity**: 🟡 MEDIUM
-**Status**: 🟡 NEW
+**Status**: ✅ FIXED (129th session)
 
 **Problem**: The `@template` JSDoc constraint for `toBaseError` only lists a subset of error types (TevmError, InsufficientBalanceError, OutOfGasError, RevertError, InvalidOpcodeError, StackOverflowError, StackUnderflowError). This omits many error types: InsufficientFundsError, InvalidJumpError, all transport errors (ForkError, NetworkError, TimeoutError), all block errors, all transaction errors, all state errors, all JSON-RPC errors, and all node errors.
 
