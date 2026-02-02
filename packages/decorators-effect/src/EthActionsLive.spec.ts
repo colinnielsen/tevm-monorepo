@@ -4,6 +4,7 @@ import { EthActionsService } from './EthActionsService.js'
 import { EthActionsLive } from './EthActionsLive.js'
 import { StateManagerService } from '@tevm/state-effect'
 import { VmService } from '@tevm/vm-effect'
+import { EvmService } from '@tevm/evm-effect'
 import { CommonService } from '@tevm/common-effect'
 import { BlockchainService } from '@tevm/blockchain-effect'
 import {
@@ -92,8 +93,28 @@ describe('EthActionsLive', () => {
 		iterator: vi.fn(() => (async function* () {})()),
 	})
 
+	const createMockEvmService = () => ({
+		evm: {} as any,
+		runCall: vi.fn(() => Effect.succeed({
+			execResult: {
+				returnValue: new Uint8Array([0x12, 0x34]),
+				executionGasUsed: 21000n,
+			},
+		})),
+		runCode: vi.fn(() => Effect.succeed({
+			returnValue: new Uint8Array(),
+			executionGasUsed: 21000n,
+		})),
+		getActivePrecompiles: vi.fn(() => Effect.succeed(new Map())),
+		addCustomPrecompile: vi.fn(() => Effect.succeed(undefined)),
+		removeCustomPrecompile: vi.fn(() => Effect.succeed(undefined)),
+		deepCopy: vi.fn(() => Effect.succeed({} as any)),
+		shallowCopy: vi.fn(() => ({} as any)),
+	})
+
 	const createTestLayer = () => {
 		const vmMock = createMockVm()
+		const evmMock = createMockEvmService()
 		const commonMock = createMockCommon()
 		const stateManagerMock = createMockStateManager()
 		const getBalanceMock = createMockGetBalanceService()
@@ -104,6 +125,7 @@ describe('EthActionsLive', () => {
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
+			Layer.succeed(EvmService, evmMock as any),
 			Layer.succeed(CommonService, commonMock as any),
 			Layer.succeed(BlockchainService, blockchainMock as any),
 			Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -115,6 +137,7 @@ describe('EthActionsLive', () => {
 			layer: Layer.provide(EthActionsLive, mockLayer),
 			mocks: {
 				vm: vmMock,
+				evm: evmMock,
 				common: commonMock,
 				stateManager: stateManagerMock,
 				blockchain: blockchainMock,
@@ -230,19 +253,19 @@ describe('EthActionsLive', () => {
 
 		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
 		expect(result).toBe('0x1234')
-		expect(mocks.vm.vm.evm.runCall).toHaveBeenCalled()
+		expect(mocks.evm.runCall).toHaveBeenCalled()
 	})
 
 	it('should handle eth_call with empty data', async () => {
 		const { layer, mocks } = createTestLayer()
 
 		// Update mock to return empty result
-		mocks.vm.vm.evm.runCall.mockResolvedValueOnce({
+		mocks.evm.runCall.mockReturnValueOnce(Effect.succeed({
 			execResult: {
 				returnValue: new Uint8Array(),
 				executionGasUsed: 21000n,
 			},
-		})
+		}))
 
 		const params = {
 			to: '0x1234567890123456789012345678901234567890' as `0x${string}`,
@@ -276,7 +299,8 @@ describe('EthActionsLive', () => {
 
 	it('should handle eth_call error from EVM', async () => {
 		const vmMock = createMockVm()
-		vmMock.vm.evm.runCall.mockRejectedValueOnce(new Error('EVM execution failed'))
+		const evmMock = createMockEvmService()
+		evmMock.runCall.mockReturnValueOnce(Effect.fail(new Error('EVM execution failed')))
 
 		const commonMock = createMockCommon()
 		const stateManagerMock = createMockStateManager()
@@ -288,6 +312,7 @@ describe('EthActionsLive', () => {
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
+			Layer.succeed(EvmService, evmMock as any),
 			Layer.succeed(CommonService, commonMock as any),
 			Layer.succeed(BlockchainService, blockchainMock as any),
 			Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -313,6 +338,7 @@ describe('EthActionsLive', () => {
 
 	it('should handle blockNumber error from blockchain', async () => {
 		const vmMock = createMockVm()
+		const evmMock = createMockEvmService()
 		const commonMock = createMockCommon()
 		const stateManagerMock = createMockStateManager()
 		const getBalanceMock = createMockGetBalanceService()
@@ -328,6 +354,7 @@ describe('EthActionsLive', () => {
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
+			Layer.succeed(EvmService, evmMock as any),
 			Layer.succeed(CommonService, commonMock as any),
 			Layer.succeed(BlockchainService, blockchainMock as any),
 			Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -349,7 +376,8 @@ describe('EthActionsLive', () => {
 	describe('EVM execution error handling', () => {
 		it('should return RevertError when EVM execution reverts', async () => {
 			const vmMock = createMockVm()
-			vmMock.vm.evm.runCall.mockResolvedValueOnce({
+			const evmMock = createMockEvmService()
+			evmMock.runCall.mockReturnValueOnce(Effect.succeed({
 				execResult: {
 					returnValue: new Uint8Array([0x08, 0xc3, 0x79, 0xa0]), // Error selector
 					executionGasUsed: 21000n,
@@ -358,7 +386,7 @@ describe('EthActionsLive', () => {
 						message: 'Insufficient balance',
 					},
 				},
-			})
+			}))
 
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
@@ -370,6 +398,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -401,7 +430,8 @@ describe('EthActionsLive', () => {
 
 		it('should return OutOfGasError when EVM runs out of gas', async () => {
 			const vmMock = createMockVm()
-			vmMock.vm.evm.runCall.mockResolvedValueOnce({
+			const evmMock = createMockEvmService()
+			evmMock.runCall.mockReturnValueOnce(Effect.succeed({
 				execResult: {
 					returnValue: new Uint8Array(),
 					executionGasUsed: 100000n,
@@ -410,7 +440,7 @@ describe('EthActionsLive', () => {
 						message: 'Transaction ran out of gas',
 					},
 				},
-			})
+			}))
 
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
@@ -422,6 +452,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -452,7 +483,8 @@ describe('EthActionsLive', () => {
 
 		it('should return InvalidOpcodeError when EVM hits invalid opcode', async () => {
 			const vmMock = createMockVm()
-			vmMock.vm.evm.runCall.mockResolvedValueOnce({
+			const evmMock = createMockEvmService()
+			evmMock.runCall.mockReturnValueOnce(Effect.succeed({
 				execResult: {
 					returnValue: new Uint8Array(),
 					executionGasUsed: 50000n,
@@ -461,7 +493,7 @@ describe('EthActionsLive', () => {
 						message: 'Invalid opcode: INVALID',
 					},
 				},
-			})
+			}))
 
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
@@ -473,6 +505,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -503,7 +536,8 @@ describe('EthActionsLive', () => {
 
 		it('should return InternalError for other EVM errors', async () => {
 			const vmMock = createMockVm()
-			vmMock.vm.evm.runCall.mockResolvedValueOnce({
+			const evmMock = createMockEvmService()
+			evmMock.runCall.mockReturnValueOnce(Effect.succeed({
 				execResult: {
 					returnValue: new Uint8Array(),
 					executionGasUsed: 50000n,
@@ -512,7 +546,7 @@ describe('EthActionsLive', () => {
 						message: 'Stack underflow at position 0',
 					},
 				},
-			})
+			}))
 
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
@@ -524,6 +558,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -555,10 +590,8 @@ describe('EthActionsLive', () => {
 		it('should handle invalid hex in data parameter', async () => {
 			const { layer, mocks } = createTestLayer()
 
-			// Make runCall throw due to invalid hex conversion
-			mocks.vm.vm.evm.runCall.mockImplementationOnce(() => {
-				throw new Error('Invalid hex')
-			})
+			// Make runCall fail due to invalid hex conversion
+			mocks.evm.runCall.mockReturnValueOnce(Effect.fail(new Error('Invalid hex')))
 
 			const params = {
 				to: '0x1234567890123456789012345678901234567890' as `0x${string}`,
@@ -576,7 +609,8 @@ describe('EthActionsLive', () => {
 
 		it('should handle revert with empty return data', async () => {
 			const vmMock = createMockVm()
-			vmMock.vm.evm.runCall.mockResolvedValueOnce({
+			const evmMock = createMockEvmService()
+			evmMock.runCall.mockReturnValueOnce(Effect.succeed({
 				execResult: {
 					returnValue: new Uint8Array(),
 					executionGasUsed: 21000n,
@@ -585,7 +619,7 @@ describe('EthActionsLive', () => {
 						message: '',
 					},
 				},
-			})
+			}))
 
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
@@ -597,6 +631,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -680,11 +715,12 @@ describe('EthActionsLive', () => {
 			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
 			// Base gas (21000) + execution gas (21000) with 10% buffer
 			expect(result).toBe(46200n)
-			expect(mocks.vm.vm.evm.runCall).toHaveBeenCalled()
+			expect(mocks.evm.runCall).toHaveBeenCalled()
 		})
 
 		it('should return block by number', async () => {
 			const vmMock = createMockVm()
+			const evmMock = createMockEvmService()
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
 			const getBalanceMock = createMockGetBalanceService()
@@ -721,6 +757,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -746,6 +783,7 @@ describe('EthActionsLive', () => {
 
 		it('should return null for non-existent block by number', async () => {
 			const vmMock = createMockVm()
+			const evmMock = createMockEvmService()
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
 			const getBalanceMock = createMockGetBalanceService()
@@ -758,6 +796,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -781,6 +820,7 @@ describe('EthActionsLive', () => {
 
 		it('should return block by hash', async () => {
 			const vmMock = createMockVm()
+			const evmMock = createMockEvmService()
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
 			const getBalanceMock = createMockGetBalanceService()
@@ -816,6 +856,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -840,6 +881,7 @@ describe('EthActionsLive', () => {
 
 		it('should return null for non-existent block by hash', async () => {
 			const vmMock = createMockVm()
+			const evmMock = createMockEvmService()
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
 			const getBalanceMock = createMockGetBalanceService()
@@ -852,6 +894,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -875,7 +918,8 @@ describe('EthActionsLive', () => {
 
 		it('should handle estimateGas revert error', async () => {
 			const vmMock = createMockVm()
-			vmMock.vm.evm.runCall.mockResolvedValueOnce({
+			const evmMock = createMockEvmService()
+			evmMock.runCall.mockReturnValueOnce(Effect.succeed({
 				execResult: {
 					returnValue: new Uint8Array([0x08, 0xc3, 0x79, 0xa0]),
 					executionGasUsed: 21000n,
@@ -884,7 +928,7 @@ describe('EthActionsLive', () => {
 						message: 'Insufficient balance',
 					},
 				},
-			})
+			}))
 
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
@@ -896,6 +940,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -925,7 +970,8 @@ describe('EthActionsLive', () => {
 
 		it('should handle estimateGas out of gas error', async () => {
 			const vmMock = createMockVm()
-			vmMock.vm.evm.runCall.mockResolvedValueOnce({
+			const evmMock = createMockEvmService()
+			evmMock.runCall.mockReturnValueOnce(Effect.succeed({
 				execResult: {
 					returnValue: new Uint8Array(),
 					executionGasUsed: 100000n,
@@ -934,7 +980,7 @@ describe('EthActionsLive', () => {
 						message: 'Transaction ran out of gas',
 					},
 				},
-			})
+			}))
 
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
@@ -946,6 +992,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -975,7 +1022,8 @@ describe('EthActionsLive', () => {
 
 		it('should handle estimateGas internal error', async () => {
 			const vmMock = createMockVm()
-			vmMock.vm.evm.runCall.mockResolvedValueOnce({
+			const evmMock = createMockEvmService()
+			evmMock.runCall.mockReturnValueOnce(Effect.succeed({
 				execResult: {
 					returnValue: new Uint8Array(),
 					executionGasUsed: 50000n,
@@ -984,7 +1032,7 @@ describe('EthActionsLive', () => {
 						message: 'Stack underflow',
 					},
 				},
-			})
+			}))
 
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
@@ -996,6 +1044,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),
@@ -1077,7 +1126,8 @@ describe('EthActionsLive', () => {
 
 		it('should handle EVM runCall failure in estimateGas', async () => {
 			const vmMock = createMockVm()
-			vmMock.vm.evm.runCall.mockRejectedValueOnce(new Error('EVM execution failed'))
+			const evmMock = createMockEvmService()
+			evmMock.runCall.mockReturnValueOnce(Effect.fail(new Error('EVM execution failed')))
 
 			const commonMock = createMockCommon()
 			const stateManagerMock = createMockStateManager()
@@ -1089,6 +1139,7 @@ describe('EthActionsLive', () => {
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(GetBalanceService, getBalanceMock as any),

@@ -26,6 +26,8 @@
  * @property {() => import('effect').Effect.Effect<import('@tevm/evm').Evm['precompiles']>} getActivePrecompiles - Get all active precompiles
  * @property {(precompile: import('@tevm/evm').CustomPrecompile) => import('effect').Effect.Effect<void>} addCustomPrecompile - Add a custom precompile
  * @property {(precompile: import('@tevm/evm').CustomPrecompile) => import('effect').Effect.Effect<void>} removeCustomPrecompile - Remove a custom precompile
+ * @property {() => import('effect').Effect.Effect<EvmShape, EvmError>} deepCopy - Create a deep copy of the EVM with copied stateManager and blockchain
+ * @property {() => EvmShape} shallowCopy - Create a shallow copy of the EVM (shares underlying state with original)
  */
 
 /**

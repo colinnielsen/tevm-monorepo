@@ -6,6 +6,7 @@
 import { Effect, Layer } from 'effect'
 import { EthActionsService } from './EthActionsService.js'
 import { VmService } from '@tevm/vm-effect'
+import { EvmService } from '@tevm/evm-effect'
 import { CommonService } from '@tevm/common-effect'
 import { BlockchainService } from '@tevm/blockchain-effect'
 import {
@@ -54,10 +55,11 @@ import { InternalError, RevertError, OutOfGasError, InvalidOpcodeError, InvalidP
  * ```
  *
  */
-export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService.js').EthActionsServiceId, never, import('@tevm/vm-effect').VmService | import('@tevm/common-effect').CommonService | import('@tevm/blockchain-effect').BlockchainService | import('@tevm/actions-effect').GetBalanceService | import('@tevm/actions-effect').GetCodeService | import('@tevm/actions-effect').GetStorageAtService>} */ (Layer.effect(
+export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService.js').EthActionsServiceId, never, import('@tevm/vm-effect').VmService | import('@tevm/evm-effect').EvmService | import('@tevm/common-effect').CommonService | import('@tevm/blockchain-effect').BlockchainService | import('@tevm/actions-effect').GetBalanceService | import('@tevm/actions-effect').GetCodeService | import('@tevm/actions-effect').GetStorageAtService>} */ (Layer.effect(
 	EthActionsService,
 	Effect.gen(function* () {
 		const vm = yield* VmService
+		const evm = yield* EvmService
 		const common = yield* CommonService
 		const blockchain = yield* BlockchainService
 		const getBalanceService = yield* GetBalanceService
@@ -157,14 +159,14 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 						callOpts['origin'] = fromAddress
 					}
 
-					const result = yield* Effect.tryPromise({
-						try: () => vm.vm.evm.runCall(/** @type {any} */ (callOpts)),
-						catch: (e) =>
+					const result = yield* evm.runCall(/** @type {any} */ (callOpts)).pipe(
+						Effect.mapError((e) =>
 							new InternalError({
 								message: `eth_call failed: ${e instanceof Error ? e.message : String(e)}`,
 								cause: e instanceof Error ? e : undefined,
-							}),
-					})
+							})
+						)
+					)
 
 					// Convert result to hex string (browser-compatible implementation)
 					const bytesToHex = (/** @type {Uint8Array} */ bytes) => {
@@ -315,14 +317,14 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 						callOpts['origin'] = fromAddress
 					}
 
-					const result = yield* Effect.tryPromise({
-						try: () => vm.vm.evm.runCall(/** @type {any} */ (callOpts)),
-						catch: (e) =>
+					const result = yield* evm.runCall(/** @type {any} */ (callOpts)).pipe(
+						Effect.mapError((e) =>
 							new InternalError({
 								message: `eth_estimateGas failed: ${e instanceof Error ? e.message : String(e)}`,
 								cause: e instanceof Error ? e : undefined,
-							}),
-					})
+							})
+						)
+					)
 
 					const execResult = result.execResult
 

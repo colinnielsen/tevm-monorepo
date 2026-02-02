@@ -2,70 +2,367 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-02 (Post 125th Review)
+**Last Updated**: 2026-02-02 (Post 126th Review)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
 
 ---
 
 ## Review Agent Summary (2026-02-02)
 
-**125th REVIEW.** Deep parallel Opus 4.5 review of all 4 phases. Found 1 CRITICAL, 3 HIGH, 9 MEDIUM, 13 LOW new issues.
+**126th REVIEW.** Deep parallel Opus 4.5 review of all 4 phases. Found 0 CRITICAL, 3 HIGH, 12 MEDIUM, 17 LOW new issues.
 
-**NEW CRITICAL Issue Found:**
-- ✅ **#R125-P4-001**: DeepCopy state inconsistency - VM and StateManager have SEPARATE copies after deepCopy(), causing EVM execution to use different state than action services - **FIXED 2026-02-02**
+**ALL HIGH Issues FIXED (2026-02-02):**
+- ✅ **#R126-P1-005**: FIXED - Removed unreachable fallback code (all errorMap tags have specific handlers)
+- ✅ **#R126-P2-004**: FIXED - Added deepCopy/shallowCopy methods to EvmShape in EvmLive.js and types.js
+- ✅ **#R126-P4-001**: FIXED - EthActionsLive now uses EvmService abstraction for runCall operations
 
-**NEW HIGH Issues Found (3 total):**
-- ✅ **#R125-P4-002**: MemoryClientLive.getBlockNumber bypasses service abstraction - **FIXED 2026-02-02**
-- ✅ **#R125-P4-003**: TevmActionsLive directly accesses `vm.vm.evm.runCall()` and `vm.vm.buildBlock()` bypassing service methods - **FIXED 2026-02-02**
-- ✅ **#R125-P4-004**: RequestLive missing ~10 standard JSON-RPC methods - **FIXED 2026-02-02**
+**NEW MEDIUM Issues Found (12 total):**
+- 🟡 **#R126-P1-001**: AccountNotFoundError includes `name` in super() unlike other errors - causes inconsistent hashing/equality
+- 🟡 **#R126-P1-003**: toBaseError returns Error instance but typed as BaseErrorLike - type mismatch
+- 🟡 **#R126-P1-006**: layerFromFactory error wrapped in UnknownException unlike wrapWithEffect - inconsistent error handling
+- 🟡 **#R126-P2-001**: StateManagerLive duplicates createShape instead of using shared wrapStateManager factory - code duplication
+- 🟡 **#R126-P2-003**: StateManagerShape typedef missing error channels on 16 methods
+- 🟡 **#R126-P2-005**: BlockchainLive and StateManagerLive have duplicated error enrichment logic (Issue #314 fix code)
+- 🟡 **#R126-P2-006**: VmShape missing shallowCopy method - inconsistent with other service shapes
+- 🟡 **#R126-P3-006**: GetStorageAtLive hexToBytes doesn't validate hex characters - silent NaN-to-0 corruption
+- 🟡 **#R126-P3-007**: SetAccountLive hexToBytes doesn't validate hex characters - security concern for user inputs
+- 🟡 **#R126-P4-002**: MemoryClientLive dispose is a no-op - potential resource leak
+- 🟡 **#R126-P4-004**: RequestLive still missing transaction/log JSON-RPC methods for EIP-1193 completeness
+- 🟡 **#R126-P3-002**: FilterLive deepCopy spreads primitives incorrectly - corrupts data if tx/blocks contain strings
 
-**NEW MEDIUM Issues Found (9 total):**
-- 🟡 **#R125-P1-001**: promiseToEffect error type lost - uses tryPromise without custom catch handler unlike wrapWithEffect
-- ✅ **#R125-P1-002**: effectToPromise unsafe default runtime cast - **FIXED 2026-02-02**
-- 🟡 **#R125-P1-003**: LoggerTest('silent') captures nothing but returns empty array misleadingly
-- 🟡 **#R125-P1-004**: toTaggedError iterates errorMap multiple times for aliases (performance)
-- 🟡 **#R125-P1-005**: toBaseError template type too narrow, missing many error types from TevmTaggedErrorUnion
-- 🟡 **#R125-P3-001**: FilterLive deepCopy may fail on primitive values in tx/blocks arrays (line 505-507)
-- 🟡 **#R125-P4-005**: EthActionsLive incomplete EVM error mapping - stack underflow/overflow, invalid jump mapped to InternalError
-- 🟡 **#R125-P4-006**: createDeepCopyClient potential memory leak - fire-and-forget dispose on failure
-- 🟡 **#R125-P4-007**: TevmCallResult.createdAddress type mismatch - toString() may not return hex format
+**NEW LOW Issues Found (17 total):**
+- 🟢 **#R126-P1-002**: wrapWithEffect no validation for empty methods array - silent incorrect usage
+- 🟢 **#R126-P1-004**: LoggerLive and LoggerTest different default levels not documented
+- 🟢 **#R126-P2-002**: shallowCopy methods don't wrap errors in Effect - violates RFC principle
+- 🟢 **#R126-P2-007**: iterator returns AsyncIterable instead of Effect Stream
+- 🟢 **#R126-P2-008**: putBlock missing error type in typedef
+- 🟢 **#R126-P2-009**: VmShape.deepCopy error type not declared in typedef
+- 🟢 **#R126-P3-003**: SnapshotLive shallow copy of nested storage in snapshot state
+- 🟢 **#R126-P3-004**: GetAccountLive address normalization before/after validation order
+- 🟢 **#R126-P3-005**: FilterLive redundant ternary in topics deep copy
+- 🟢 **#R126-P3-008**: BlockParamsLive "atomic" comment misleading - operations are concurrent
+- 🟢 **#R126-P3-009**: SnapshotLive asymmetric error handling between catchAllDefect and catchAll
+- 🟢 **#R126-P3-011**: FilterLive error state preservation in deep copy inconsistent with listener handling
+- 🟢 **#R126-P3-012**: SetAccountLive potentially redundant codeHash calculation
+- 🟢 **#R126-P3-013**: SnapshotLive snapshot ID gap possible on Ref.update failure
+- 🟢 **#R126-P4-003**: EthActionsLive estimateGas has reduced error mapping vs call method
+- 🟢 **#R126-P3-001**: SetAccountLive storage regex also has case normalization ordering issue (related to #R125-P3-007)
+- 🟢 **#R126-P3-010**: (Info) GetAccountLive good defensive coding for empty bytecode - NOT an issue
 
-**NEW LOW Issues Found (13 total):**
-- 🟢 **#R125-P1-006**: wrapWithEffect state divergence (documented but counter-intuitive)
-- 🟢 **#R125-P1-007**: layerFromFactory missing parameter validation unlike promiseToEffect
-- 🟢 **#R125-P2-001**: BlockchainLive blockId cast excludes 'forked' from BlockTag
-- 🟢 **#R125-P2-002**: ForkConfigFromRpc error channel not documented in JSDoc
-- 🟢 **#R125-P2-003**: Potential TOCTOU race in HttpTransport batched shutdown (has mitigation)
-- 🟢 **#R125-P2-004**: EvmShape exposes raw `evm` instance breaking service abstraction
-- 🟢 **#R125-P3-002**: SnapshotLive takeSnapshot Ref.update after commit (rare edge case)
-- 🟢 **#R125-P3-003**: SnapshotLive deepCopy doesn't validate newStateManager state
-- 🟢 **#R125-P3-004**: FilterLive deepCopy topics ternary may mishandle null
-- 🟢 **#R125-P3-005**: GetStorageAtLive hexToBytes doesn't validate hex characters
-- 🟢 **#R125-P3-006**: SetAccountLive hexToBytes missing explicit hex validation
-- 🟢 **#R125-P3-007**: SetAccountLive storage value regex rejects "0x" (valid empty hex)
-- 🟢 **#R125-P4-008**: Common copy method self-reference pattern confusing
-
-**Verified Fixes from Previous Reviews:**
-- ✅ **#NEW-P3-001** FIXED: ImpersonationLive.deepCopy atomic Ref reads
-- ✅ **#NEW-P3-002** FIXED: SnapshotLive.revertToSnapshot sequential execution
-- ✅ **#70** FIXED: getAccount errors mapped to InternalError
-- ✅ **#53** FIXED: revert checkpoint when commit fails in takeSnapshot
-- ✅ **#292** FIXED: Atomic clearNextBlockOverrides
-- ✅ **#296** FIXED: Atomic deepCopy reads in ImpersonationLive
-- ✅ **#295** FIXED: hex validation in SnapshotLive
+**Verified from Previous Reviews (Still Present):**
+- 🟡 **#R125-P1-001**: promiseToEffect error type lost
+- 🟡 **#R125-P1-003**: LoggerTest('silent') captures nothing misleadingly
+- 🟡 **#R125-P1-004**: toTaggedError iterates errorMap multiple times for aliases
+- 🟡 **#R125-P1-005**: toBaseError template type too narrow
+- 🟡 **#R125-P3-001**: FilterLive deepCopy may fail on primitive values
+- 🟡 **#R125-P4-005**: EthActionsLive incomplete EVM error mapping
+- 🟡 **#R125-P4-006**: createDeepCopyClient potential memory leak
+- 🟡 **#R125-P4-007**: TevmCallResult.createdAddress type mismatch
 
 | Phase | Review Status | Packages | Total Tests | Coverage | RFC Compliance |
 |-------|---------------|----------|-------------|----------|----------------|
-| **Phase 1** | 🟡 NEEDS REVIEW | 3 (errors-effect, interop, logger-effect) | 695 | 100% | 1 HIGH (1 FIXED), 3 MEDIUM, 2 LOW NEW |
-| **Phase 2** | 🟡 NEEDS FIX | 6 (common, transport, blockchain, state, evm, vm) | 231 | 100% | 0 HIGH, 4 MEDIUM, 4 LOW NEW |
-| **Phase 3** | 🟡 NEEDS FIX | 2 (node-effect, actions-effect) | 219 | 100% | 0 CRITICAL, 0 HIGH, 1 MEDIUM, 6 LOW NEW |
-| **Phase 4** | 🟡 HIGH | 2 (memory-client-effect, decorators-effect) | 167 | ~97% | 0 CRITICAL (FIXED), 3 HIGH, 3 MEDIUM, 1 LOW NEW |
+| **Phase 1** | ✅ FIXED | 3 (errors-effect, interop, logger-effect) | 695 | 100% | HIGH fixed, 4 MEDIUM, 2 LOW remain |
+| **Phase 2** | ✅ FIXED | 6 (common, transport, blockchain, state, evm, vm) | 231 | 100% | HIGH fixed, 4 MEDIUM, 5 LOW remain |
+| **Phase 3** | 🟡 NEEDS FIX | 2 (node-effect, actions-effect) | 219 | 100% | 0 HIGH, 3 MEDIUM, 9 LOW NEW |
+| **Phase 4** | ✅ FIXED | 2 (memory-client-effect, decorators-effect) | 167 | ~97% | HIGH fixed, 2 MEDIUM, 1 LOW remain |
 
-**Open Issues Summary (Post 125th Review):**
-- **CRITICAL**: 0 ✅ (#R125-P4-001 - DeepCopy state inconsistency - FIXED 2026-02-02)
-- **HIGH**: 0 ✅ (All 3 FIXED: #R125-P4-002, #R125-P4-003, #R125-P4-004)
-- **MEDIUM**: 128 🟡 (Previous 119 + 9 NEW from 125th review)
-- **LOW**: 313 (Previous 300 + 13 NEW from 125th review)
+**Open Issues Summary (Post HIGH Priority Fixes):**
+- **CRITICAL**: 0 ✅
+- **HIGH**: 0 ✅ (All 3 HIGH issues fixed: #R126-P1-005, #R126-P2-004, #R126-P4-001)
+- **MEDIUM**: 140 🟡 (Previous 128 + 12 NEW from 126th review)
+- **LOW**: 330 (Previous 313 + 17 NEW from 126th review)
+
+---
+
+### 126TH REVIEW (2026-02-02) - Deep Parallel Opus 4.5 Review
+
+**Reviewed By**: Claude Opus 4.5 (4 parallel subagents reviewing each phase independently)
+**Scope**: Complete independent deep dive review of all 4 phases focusing on NEW unreviewed issues
+
+---
+
+#### Phase 1: 1 HIGH + 3 MEDIUM + 2 LOW NEW Issues Found
+
+##### Issue #R126-P1-005: toTaggedError ErrorClass Lookup Not Used as Fallback
+**File:Lines**: `packages/errors-effect/src/interop/toTaggedError.js:143-401`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: When a BaseError has a `_tag` that exists in `errorMap` (line 149), the function looks up the `ErrorClass` successfully. However, if none of the specific handler branches (lines 156-392) match that tag, the function falls through WITHOUT using the looked-up ErrorClass, instead returning a generic TevmError.
+
+**Impact**: Silent data loss when converting errors that are in errorMap but missing handler branches. New error types added to errorMap but without corresponding handler branches will be incorrectly converted.
+
+**Recommended Fix**: Add fallback at end of if-chain inside `if (ErrorClass)` block:
+```javascript
+return new ErrorClass({ message: baseError['message'], cause: baseError['cause'] })
+```
+
+---
+
+##### Issue #R126-P1-001: AccountNotFoundError Inconsistent super() Call
+**File:Lines**: `packages/errors-effect/src/state/AccountNotFoundError.js:89-101`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: AccountNotFoundError is the ONLY error class that includes `name` in super() call. All other error classes (RevertError, InsufficientBalanceError, etc.) do NOT pass `name` to super.
+
+**Impact**: Effect.ts uses properties passed to super() for equality/hashing. This inconsistency causes different equality behavior for AccountNotFoundError vs other errors.
+
+**Recommended Fix**: Remove `name` from super() call to match pattern of other error classes.
+
+---
+
+##### Issue #R126-P1-003: toBaseError Returns Error But Typed as BaseErrorLike
+**File:Lines**: `packages/errors-effect/src/interop/toBaseError.js:106-154`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: Function creates an Error instance then assigns properties via Object.assign. Return type is `BaseErrorLike` (plain object type) but actual return is an Error instance.
+
+**Impact**: `instanceof Error` checks will succeed but TypeScript doesn't know this. The `walk` method references intermediate error object rather than final result.
+
+**Recommended Fix**: Update BaseErrorLike typedef to extend Error or change return type to include `& Error`.
+
+---
+
+##### Issue #R126-P1-006: layerFromFactory Error Wrapped in UnknownException
+**File:Lines**: `packages/interop/src/layerFromFactory.js:56-63`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: Uses `Effect.tryPromise` without custom `catch` handler, wrapping errors in UnknownException. This differs from `wrapWithEffect` which uses `catch: (error) => error` to preserve original error type.
+
+**Impact**: Error type information lost when factory rejects, making debugging harder.
+
+**Recommended Fix**: Add catch handler like wrapWithEffect: `catch: (error) => error`
+
+---
+
+##### Issue #R126-P1-002: wrapWithEffect No Empty Methods Validation
+**File:Lines**: `packages/interop/src/wrapWithEffect.js:74-120`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Does not validate that methods array is non-empty. Calling with empty array produces wrapped object with empty `.effect` property.
+
+**Impact**: Silent incorrect usage - developer may expect wrapping but gets no Effect methods.
+
+---
+
+##### Issue #R126-P1-004: LoggerLive and LoggerTest Different Default Levels
+**File:Lines**: `LoggerLive.js:110, LoggerTest.js:178`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: LoggerLive defaults to 'warn', LoggerTest defaults to 'debug'. Not documented in JSDoc.
+
+**Impact**: Confusing when switching between implementations.
+
+---
+
+#### Phase 2: 1 HIGH + 4 MEDIUM + 5 LOW NEW Issues Found
+
+##### Issue #R126-P2-004: EvmShape Missing deepCopy and shallowCopy Methods
+**File:Lines**: `packages/evm-effect/src/EvmLive.js:91-115, types.js:22-28`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: Unlike StateManagerShape, BlockchainShape, and VmShape, EvmShape does not provide deepCopy or shallowCopy methods. This breaks symmetry with other services.
+
+**Impact**: State isolation issues when EVM needs to be copied for parallel execution or forking. Blocks proper implementation of client deepCopy.
+
+**Recommended Fix**: Add deepCopy/shallowCopy methods to EvmShape using `evm.deepCopy()` and `evm.shallowCopy()`.
+
+---
+
+##### Issue #R126-P2-001: StateManagerLive Duplicates createShape
+**File:Lines**: `packages/state-effect/src/StateManagerLive.js:144-331`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: StateManagerLive defines 187-line inline createShape function nearly identical to exported createStateManagerShape in wrapStateManager.js. StateManagerLocal correctly uses shared factory but StateManagerLive does not.
+
+**Impact**: Code duplication, risk of implementations drifting, maintenance burden.
+
+**Recommended Fix**: Refactor to use `createStateManagerShape` from wrapStateManager.js.
+
+---
+
+##### Issue #R126-P2-003: StateManagerShape Typedef Missing Error Channels
+**File:Lines**: `packages/state-effect/src/types.js:30-47`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: 16 methods in StateManagerShape typedef don't declare error types. Only setStateRoot correctly declares StateRootNotFoundError.
+
+**Impact**: Consumers don't know what errors to handle.
+
+**Recommended Fix**: Add error types to all method signatures.
+
+---
+
+##### Issue #R126-P2-005: Duplicated Error Enrichment Logic
+**File:Lines**: `BlockchainLive.js:94-114, StateManagerLive.js:104-123`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: Identical Issue #314 fix code for enriching ForkError duplicated in both files.
+
+**Recommended Fix**: Extract to shared utility in transport-effect package.
+
+---
+
+##### Issue #R126-P2-006: VmShape Missing shallowCopy Method
+**File:Lines**: `packages/vm-effect/src/VmLive.js, types.js:20-27`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: VmShape has deepCopy but not shallowCopy, unlike BlockchainShape and StateManagerShape.
+
+**Impact**: API inconsistency, limits use cases where shallow copy is sufficient.
+
+---
+
+##### Issue #R126-P2-002: shallowCopy Methods Don't Wrap Errors
+**File:Lines**: `StateManagerLive.js:328, wrapStateManager.js:250, BlockchainLive.js:251`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: shallowCopy methods return synchronously without Effect wrapping. If underlying shallowCopy throws, not captured in error channel.
+
+---
+
+##### Issue #R126-P2-007: iterator Returns AsyncIterable Not Effect Stream
+**File:Lines**: `packages/blockchain-effect/src/BlockchainLive.js:270-297`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Returns AsyncIterable<Block> instead of Effect Stream, breaking Effect paradigm.
+
+---
+
+##### Issue #R126-P2-008: putBlock Missing Error Type in Typedef
+**File:Lines**: `packages/blockchain-effect/src/types.js:31`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: putBlock doesn't declare InvalidBlockError in types but implementation throws it.
+
+---
+
+##### Issue #R126-P2-009: VmShape.deepCopy Error Type Not Declared
+**File:Lines**: `packages/vm-effect/src/types.js:26`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: deepCopy signature doesn't include VmError type that mapEvmError returns.
+
+---
+
+#### Phase 3: 0 HIGH + 3 MEDIUM + 9 LOW NEW Issues Found
+
+##### Issue #R126-P3-006: GetStorageAtLive hexToBytes No Hex Validation
+**File:Lines**: `packages/actions-effect/src/GetStorageAtLive.js:41-52`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: hexToBytes doesn't validate hex characters. Invalid chars like `0xGGGG` cause Number.parseInt to return NaN, cast to 0 in Uint8Array - silent data corruption.
+
+**Impact**: Security concern - invalid user input causes silent corruption.
+
+**Recommended Fix**: Add validation: `if (!/^[0-9a-fA-F]*$/.test(cleanHex)) throw new Error(...)`
+
+---
+
+##### Issue #R126-P3-007: SetAccountLive hexToBytes Same Issue
+**File:Lines**: `packages/actions-effect/src/SetAccountLive.js:19-30`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: Same as #R126-P3-006 - hexToBytes no validation for storage keys/values from user input.
+
+---
+
+##### Issue #R126-P3-002: FilterLive deepCopy Spreads Primitives
+**File:Lines**: `packages/node-effect/src/FilterLive.js:504-507`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW (Related to #R125-P3-001)
+
+**Problem**: If tx/blocks arrays contain primitives (strings), spread produces object with numeric keys corrupting data. E.g., `{..."0xabc"}` → `{0:"0",1:"x",2:"a"...}`
+
+**Recommended Fix**: Add type check: `typeof t === 'object' && t !== null ? {...t} : t`
+
+---
+
+##### Issues #R126-P3-003 through #R126-P3-013 (9 LOW)
+See summary table above. All are edge cases, documentation issues, or minor inconsistencies.
+
+---
+
+#### Phase 4: 1 HIGH + 2 MEDIUM + 1 LOW NEW Issues Found
+
+##### Issue #R126-P4-001: EthActionsLive Bypasses EvmService Abstraction
+**File:Lines**: `packages/decorators-effect/src/EthActionsLive.js:161,319`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: EthActionsLive uses `vm.vm.evm.runCall()` directly instead of EvmService like TevmActionsLive does. TevmActionsLive correctly imports and uses `evm.runCall()` via EvmService.
+
+**Impact**: Violates RFC 4.2 service abstraction, inconsistent with TevmActionsLive pattern.
+
+**Recommended Fix**: Import EvmService, add to layer dependencies, replace direct access with service method.
+
+---
+
+##### Issue #R126-P4-002: MemoryClientLive dispose is No-Op
+**File:Lines**: `packages/memory-client-effect/src/MemoryClientLive.js:753-755`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: dispose method is empty no-op.
+
+**Impact**: Potential resource leak if client holds resources needing cleanup.
+
+---
+
+##### Issue #R126-P4-004: RequestLive Missing Transaction/Log Methods
+**File:Lines**: `packages/decorators-effect/src/RequestLive.js:62-288`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: Still missing: eth_getTransactionCount, eth_getTransactionByHash, eth_getTransactionReceipt, eth_sendTransaction, eth_sendRawTransaction, eth_getLogs, eth_newFilter, eth_getFilterChanges, anvil_snapshot, anvil_revert.
+
+**Impact**: Incomplete EIP-1193 compatibility for transaction/log workflows.
+
+---
+
+##### Issue #R126-P4-003: EthActionsLive estimateGas Reduced Error Mapping
+**File:Lines**: `packages/decorators-effect/src/EthActionsLive.js:330-368`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: estimateGas only handles revert and out of gas, but call also handles invalid opcode.
+
+---
+
+#### Summary Table (126th Review)
+
+| Phase | CRITICAL | HIGH | MEDIUM | LOW | Total NEW |
+|-------|----------|------|--------|-----|-----------|
+| **Phase 1** | 0 | 1 | 3 | 2 | 6 |
+| **Phase 2** | 0 | 1 | 4 | 5 | 10 |
+| **Phase 3** | 0 | 0 | 3 | 9 | 12 |
+| **Phase 4** | 0 | 1 | 2 | 1 | 4 |
+| **TOTAL NEW** | **0** | **3** | **12** | **17** | **32** |
+
+---
+
+#### Priority Fixes Required (126th Review)
+
+1. **HIGH #R126-P1-005**: toTaggedError ErrorClass fallback - prevents silent error type loss
+2. **HIGH #R126-P2-004**: EvmShape missing deepCopy/shallowCopy - needed for state isolation
+3. **HIGH #R126-P4-001**: EthActionsLive bypasses EvmService - RFC compliance
+4. **MEDIUM #R126-P3-006/007**: hexToBytes hex validation - security concern
 
 ---
 

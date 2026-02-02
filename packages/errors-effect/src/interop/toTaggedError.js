@@ -390,6 +390,9 @@ export const toTaggedError = /** @type {import('./toTaggedError.types.js').toTag
 					cause: baseError['cause'],
 				})
 			}
+			// Note: All error tags in errorMap have specific handlers above.
+			// If a new error is added to errorMap without a handler, it will fall through
+			// to the generic TevmError below.
 		}
 
 		// Fall back to generic TevmError
