@@ -8,6 +8,7 @@ import { MemoryClientService } from './MemoryClientService.js'
 import { StateManagerService, createStateManagerShape } from '@tevm/state-effect'
 import { VmService } from '@tevm/vm-effect'
 import { CommonService } from '@tevm/common-effect'
+import { BlockchainService } from '@tevm/blockchain-effect'
 // Note: Action services are created inline in createActionServices() to ensure
 // deepCopy creates services bound to the copied state manager
 import { SnapshotService } from '@tevm/node-effect'
@@ -636,6 +637,7 @@ const createActionServices = (stateManager) => {
  * @param {import('@tevm/state-effect').StateManagerShape} deps.stateManager
  * @param {import('@tevm/vm-effect').VmShape} deps.vm
  * @param {import('@tevm/common-effect').CommonShape} deps.common
+ * @param {import('@tevm/blockchain-effect').BlockchainShape} deps.blockchain
  * @param {import('@tevm/node-effect').SnapshotShape} deps.snapshotService
  * @param {Ref.Ref<boolean>} deps.readyRef
  * @returns {import('./types.js').MemoryClientShape}
@@ -645,6 +647,7 @@ const createMemoryClientShape = (deps) => {
 		stateManager,
 		vm,
 		common,
+		blockchain,
 		snapshotService,
 		readyRef,
 	} = deps
@@ -657,16 +660,8 @@ const createMemoryClientShape = (deps) => {
 		ready: Ref.get(readyRef),
 
 		getBlockNumber: Effect.gen(function* () {
-			// Access the underlying VM's blockchain to get the canonical head block
-			// VmShape doesn't expose getBlock() directly - use vm.vm.blockchain
-			const block = yield* Effect.tryPromise({
-				try: () => vm.vm.blockchain.getCanonicalHeadBlock(),
-				catch: (e) =>
-					new InternalError({
-						message: `Failed to get canonical head block: ${/** @type {unknown} */ (e) instanceof Error ? /** @type {Error} */ (e).message : String(e)}`,
-						cause: /** @type {unknown} */ (e) instanceof Error ? /** @type {Error} */ (e) : undefined,
-					}),
-			})
+			// Use BlockchainService abstraction instead of direct VM access (fixes #R125-P4-002)
+			const block = yield* blockchain.getCanonicalHeadBlock()
 			return block.header.number
 		}),
 
@@ -723,6 +718,10 @@ const createMemoryClientShape = (deps) => {
 				// snapshot operations (takeSnapshot, revertToSnapshot) operate on the copied state,
 				// not the original state manager. (Issue #233, #234 fix)
 				const snapshotCopy = yield* snapshotService.deepCopy(stateManagerCopy)
+
+				// Deep copy blockchain to maintain service abstraction (Issue #R125-P4-002)
+				const blockchainCopy = yield* blockchain.deepCopy()
+
 				const currentReady = yield* Ref.get(readyRef)
 				const newReadyRef = yield* Ref.make(currentReady)
 
@@ -745,6 +744,7 @@ const createMemoryClientShape = (deps) => {
 					stateManager: stateManagerCopy,
 					vm: vmCopy,
 					common: commonCopy,
+					blockchain: blockchainCopy,
 					snapshotService: snapshotCopy,
 					readyRef: newReadyRef,
 				})
@@ -799,7 +799,7 @@ const createMemoryClientShape = (deps) => {
  * @returns {Layer.Layer<
  *   MemoryClientService,
  *   never,
- *   StateManagerService | VmService | CommonService | SnapshotService
+ *   StateManagerService | VmService | CommonService | BlockchainService | SnapshotService
  * >}
  */
 export const MemoryClientLive = Layer.effect(
@@ -809,6 +809,7 @@ export const MemoryClientLive = Layer.effect(
 		const stateManager = yield* StateManagerService
 		const vm = yield* VmService
 		const common = yield* CommonService
+		const blockchain = yield* BlockchainService
 		const snapshotService = yield* SnapshotService
 
 		// Create ready state ref
@@ -820,6 +821,7 @@ export const MemoryClientLive = Layer.effect(
 			stateManager,
 			vm,
 			common,
+			blockchain,
 			snapshotService,
 			readyRef,
 		})

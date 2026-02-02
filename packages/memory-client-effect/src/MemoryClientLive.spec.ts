@@ -6,6 +6,7 @@ import { StateManagerService } from '@tevm/state-effect'
 import { VmService } from '@tevm/vm-effect'
 import { CommonService } from '@tevm/common-effect'
 import { SnapshotService } from '@tevm/node-effect'
+import { BlockchainService } from '@tevm/blockchain-effect'
 
 describe('MemoryClientLive', () => {
 	// Create mock implementations for all required services
@@ -103,17 +104,51 @@ describe('MemoryClientLive', () => {
 		),
 	})
 
+	const createMockBlockchain = () => ({
+		chain: {} as any,
+		getBlock: vi.fn(() => Effect.succeed({ header: { number: 100n } } as any)),
+		getBlockByHash: vi.fn(() => Effect.succeed({ header: { number: 100n } } as any)),
+		putBlock: vi.fn(() => Effect.succeed(undefined)),
+		getCanonicalHeadBlock: vi.fn(() => Effect.succeed({ header: { number: 100n } } as any)),
+		getIteratorHead: vi.fn(() => Effect.succeed({ header: { number: 100n } } as any)),
+		setIteratorHead: vi.fn(() => Effect.succeed(undefined)),
+		delBlock: vi.fn(() => Effect.succeed(undefined)),
+		validateHeader: vi.fn(() => Effect.succeed(undefined)),
+		ready: Effect.succeed(undefined),
+		iterator: vi.fn(() => (async function* () {})()),
+		shallowCopy: vi.fn(() => ({} as any)),
+		deepCopy: vi.fn(() =>
+			Effect.succeed({
+				chain: {} as any,
+				getBlock: vi.fn(() => Effect.succeed({ header: { number: 101n } } as any)),
+				getBlockByHash: vi.fn(() => Effect.succeed({ header: { number: 101n } } as any)),
+				putBlock: vi.fn(() => Effect.succeed(undefined)),
+				getCanonicalHeadBlock: vi.fn(() => Effect.succeed({ header: { number: 101n } } as any)),
+				getIteratorHead: vi.fn(() => Effect.succeed({ header: { number: 101n } } as any)),
+				setIteratorHead: vi.fn(() => Effect.succeed(undefined)),
+				delBlock: vi.fn(() => Effect.succeed(undefined)),
+				validateHeader: vi.fn(() => Effect.succeed(undefined)),
+				ready: Effect.succeed(undefined),
+				iterator: vi.fn(() => (async function* () {})()),
+				shallowCopy: vi.fn(() => ({} as any)),
+				deepCopy: vi.fn(() => Effect.succeed({} as any)),
+			} as any)
+		),
+	})
+
 	const createTestLayer = () => {
 		const stateManagerMock = createMockStateManager()
 		const vmMock = createMockVm()
 		const commonMock = createMockCommon()
 		const snapshotMock = createMockSnapshotService()
+		const blockchainMock = createMockBlockchain()
 
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
 			Layer.succeed(CommonService, commonMock as any),
-			Layer.succeed(SnapshotService, snapshotMock as any)
+			Layer.succeed(SnapshotService, snapshotMock as any),
+			Layer.succeed(BlockchainService, blockchainMock as any)
 		)
 
 		return {
@@ -123,6 +158,7 @@ describe('MemoryClientLive', () => {
 				vm: vmMock,
 				common: commonMock,
 				snapshot: snapshotMock,
+				blockchain: blockchainMock,
 			},
 		}
 	}

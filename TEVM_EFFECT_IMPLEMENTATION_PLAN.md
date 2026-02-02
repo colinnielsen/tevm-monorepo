@@ -15,7 +15,7 @@
 - ✅ **#R125-P4-001**: DeepCopy state inconsistency - VM and StateManager have SEPARATE copies after deepCopy(), causing EVM execution to use different state than action services - **FIXED 2026-02-02**
 
 **NEW HIGH Issues Found (3 total):**
-- 🔴 **#R125-P4-002**: MemoryClientLive.getBlockNumber bypasses service abstraction, accesses `vm.vm.blockchain` directly
+- ✅ **#R125-P4-002**: MemoryClientLive.getBlockNumber bypasses service abstraction - **FIXED 2026-02-02**
 - 🔴 **#R125-P4-003**: TevmActionsLive directly accesses `vm.vm.evm.runCall()` and `vm.vm.buildBlock()` bypassing service methods
 - ✅ **#R125-P4-004**: RequestLive missing ~10 standard JSON-RPC methods - **FIXED 2026-02-02**
 
@@ -63,7 +63,7 @@
 
 **Open Issues Summary (Post 125th Review):**
 - **CRITICAL**: 0 ✅ (#R125-P4-001 - DeepCopy state inconsistency - FIXED 2026-02-02)
-- **HIGH**: 2 🔴 (#R125-P4-002, #R125-P4-003) + 1 ✅ FIXED (#R125-P4-004)
+- **HIGH**: 1 🔴 (#R125-P4-003) + 2 ✅ FIXED (#R125-P4-002, #R125-P4-004)
 - **MEDIUM**: 128 🟡 (Previous 119 + 9 NEW from 125th review)
 - **LOW**: 313 (Previous 300 + 13 NEW from 125th review)
 
@@ -360,16 +360,23 @@ This ensures both VM and action services use the SAME stateManager instance. Als
 
 ---
 
-##### Issue #R125-P4-002: getBlockNumber Bypasses Service Abstraction
+##### Issue #R125-P4-002: getBlockNumber Bypasses Service Abstraction ✅ FIXED
 **File:Lines**: `packages/memory-client-effect/src/MemoryClientLive.js:661-671`
 **Severity**: 🔴 HIGH
-**Status**: 🟡 NEW
+**Status**: ✅ FIXED (2026-02-02)
 
 **Problem**: Directly accesses `vm.vm.blockchain.getCanonicalHeadBlock()` instead of using a BlockchainService abstraction.
 
 **Impact**: Violates RFC 4.2 service abstraction, makes testing harder, breaks encapsulation.
 
-**Recommended Fix**: Add `getCanonicalHeadBlock()` to VmShape interface or use separate BlockchainService.
+**Fix Applied**:
+1. Added BlockchainService as a dependency to MemoryClientLive
+2. Updated createMemoryClientShape to accept blockchain parameter
+3. Changed getBlockNumber to use `blockchain.getCanonicalHeadBlock()` instead of direct VM access
+4. Updated deepCopy to also copy the blockchain service using `blockchain.deepCopy()`
+5. Updated Layer to yield BlockchainService dependency
+6. Added BlockchainService mock to test file for proper test coverage
+7. Test results: 31 tests pass for memory-client-effect package
 
 ---
 
