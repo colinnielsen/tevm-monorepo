@@ -420,7 +420,33 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 						gasUsed: `0x${header.gasUsed.toString(16)}`,
 						timestamp: `0x${header.timestamp.toString(16)}`,
 						transactions: params.includeTransactions
-							? block.transactions.map((tx) => tx.hash ? bytesToHex(tx.hash()) : '0x')
+							? block.transactions.map((tx, txIndex) => {
+								const txJSON = tx.toJSON()
+								const from = tx.getSenderAddress ? tx.getSenderAddress().toString() : '0x0000000000000000000000000000000000000000'
+								return /** @type {object} */ ({
+									blockHash: bytesToHex(block.hash()),
+									blockNumber: `0x${header.number.toString(16)}`,
+									from: /** @type {`0x${string}`} */ (from),
+									gas: /** @type {`0x${string}`} */ (txJSON.gasLimit ?? '0x0'),
+									gasPrice: /** @type {`0x${string}`} */ (txJSON.gasPrice ?? txJSON.maxFeePerGas ?? '0x0'),
+									hash: tx.hash ? bytesToHex(tx.hash()) : '0x',
+									input: /** @type {`0x${string}`} */ (txJSON.data ?? '0x'),
+									nonce: /** @type {`0x${string}`} */ (txJSON.nonce ?? '0x0'),
+									to: txJSON.to ? /** @type {`0x${string}`} */ (String(txJSON.to)) : null,
+									transactionIndex: `0x${txIndex.toString(16)}`,
+									value: /** @type {`0x${string}`} */ (txJSON.value ?? '0x0'),
+									type: `0x${tx.type.toString(16)}`,
+									v: txJSON.v ?? '0x0',
+									r: txJSON.r ?? '0x0',
+									s: txJSON.s ?? '0x0',
+									...(txJSON.chainId !== undefined ? { chainId: /** @type {`0x${string}`} */ (String(txJSON.chainId)) } : {}),
+									...(txJSON.accessList !== undefined ? { accessList: txJSON.accessList } : {}),
+									...(txJSON.maxFeePerGas !== undefined ? { maxFeePerGas: /** @type {`0x${string}`} */ (txJSON.maxFeePerGas) } : {}),
+									...(txJSON.maxPriorityFeePerGas !== undefined ? { maxPriorityFeePerGas: /** @type {`0x${string}`} */ (txJSON.maxPriorityFeePerGas) } : {}),
+									...(txJSON.maxFeePerBlobGas !== undefined ? { maxFeePerBlobGas: /** @type {`0x${string}`} */ (txJSON.maxFeePerBlobGas) } : {}),
+									...(txJSON.blobVersionedHashes !== undefined ? { blobVersionedHashes: txJSON.blobVersionedHashes } : {}),
+								})
+							})
 							: block.transactions.map((tx) => tx.hash ? bytesToHex(tx.hash()) : '0x'),
 						uncles: block.uncleHeaders?.map((uncle) => bytesToHex(uncle.hash())) ?? [],
 					})
@@ -469,7 +495,33 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 						gasUsed: `0x${header.gasUsed.toString(16)}`,
 						timestamp: `0x${header.timestamp.toString(16)}`,
 						transactions: params.includeTransactions
-							? block.transactions.map((tx) => tx.hash ? bytesToHex(tx.hash()) : '0x')
+							? block.transactions.map((tx, txIndex) => {
+								const txJSON = tx.toJSON()
+								const from = tx.getSenderAddress ? tx.getSenderAddress().toString() : '0x0000000000000000000000000000000000000000'
+								return /** @type {object} */ ({
+									blockHash: bytesToHex(block.hash()),
+									blockNumber: `0x${header.number.toString(16)}`,
+									from: /** @type {`0x${string}`} */ (from),
+									gas: /** @type {`0x${string}`} */ (txJSON.gasLimit ?? '0x0'),
+									gasPrice: /** @type {`0x${string}`} */ (txJSON.gasPrice ?? txJSON.maxFeePerGas ?? '0x0'),
+									hash: tx.hash ? bytesToHex(tx.hash()) : '0x',
+									input: /** @type {`0x${string}`} */ (txJSON.data ?? '0x'),
+									nonce: /** @type {`0x${string}`} */ (txJSON.nonce ?? '0x0'),
+									to: txJSON.to ? /** @type {`0x${string}`} */ (String(txJSON.to)) : null,
+									transactionIndex: `0x${txIndex.toString(16)}`,
+									value: /** @type {`0x${string}`} */ (txJSON.value ?? '0x0'),
+									type: `0x${tx.type.toString(16)}`,
+									v: txJSON.v ?? '0x0',
+									r: txJSON.r ?? '0x0',
+									s: txJSON.s ?? '0x0',
+									...(txJSON.chainId !== undefined ? { chainId: /** @type {`0x${string}`} */ (String(txJSON.chainId)) } : {}),
+									...(txJSON.accessList !== undefined ? { accessList: txJSON.accessList } : {}),
+									...(txJSON.maxFeePerGas !== undefined ? { maxFeePerGas: /** @type {`0x${string}`} */ (txJSON.maxFeePerGas) } : {}),
+									...(txJSON.maxPriorityFeePerGas !== undefined ? { maxPriorityFeePerGas: /** @type {`0x${string}`} */ (txJSON.maxPriorityFeePerGas) } : {}),
+									...(txJSON.maxFeePerBlobGas !== undefined ? { maxFeePerBlobGas: /** @type {`0x${string}`} */ (txJSON.maxFeePerBlobGas) } : {}),
+									...(txJSON.blobVersionedHashes !== undefined ? { blobVersionedHashes: txJSON.blobVersionedHashes } : {}),
+								})
+							})
 							: block.transactions.map((tx) => tx.hash ? bytesToHex(tx.hash()) : '0x'),
 						uncles: block.uncleHeaders?.map((uncle) => bytesToHex(uncle.hash())) ?? [],
 					})
