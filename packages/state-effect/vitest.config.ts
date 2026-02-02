@@ -14,6 +14,7 @@ export default defineConfig({
 				'src/**/*Shape.js',
 				'src/**/*Service.js',
 				'src/**/StateManagerLive.js',
+				'src/**/StateManagerLocal.js',
 			],
 			reporter: ['text', 'json-summary', 'json'],
 			thresholds: {

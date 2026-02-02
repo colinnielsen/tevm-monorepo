@@ -5,7 +5,7 @@
 
 import { Effect, Layer, Ref } from 'effect'
 import { MemoryClientService } from './MemoryClientService.js'
-import { StateManagerService } from '@tevm/state-effect'
+import { StateManagerService, createStateManagerShape } from '@tevm/state-effect'
 import { VmService } from '@tevm/vm-effect'
 import { CommonService } from '@tevm/common-effect'
 // Note: Action services are created inline in createActionServices() to ensure
@@ -690,27 +690,35 @@ const createMemoryClientShape = (deps) => {
 		 * Create a deep copy of the memory client.
 		 *
 		 * **IMPORTANT**: This method creates a consistent copy where:
-		 * - All action methods (getAccount, setAccount, etc.) operate on the copied stateManager
-		 * - The VM is separately deep-copied and has its own internal stateManager
+		 * - The VM is deep-copied first (which creates its own internal stateManager copy)
+		 * - The stateManagerShape is created from the VM's internal stateManager
+		 * - All action methods (getAccount, setAccount, etc.) operate on the SAME stateManager
+		 *   that the VM uses for EVM execution
 		 *
-		 * **STATE MANAGER CONSISTENCY NOTE**:
-		 * After deepCopy, the action services use `stateManagerCopy`, while `vmCopy.vm.stateManager`
-		 * is a separate copy created during VM.deepCopy(). For consistent behavior:
-		 * - Use action methods (getAccount, setAccount, getBalance, etc.) for state operations
-		 * - Avoid direct access to `vm.vm.stateManager` after deepCopy
+		 * **STATE CONSISTENCY FIX (Issue #R125-P4-001)**:
+		 * Previously, deepCopy created TWO separate stateManager copies:
+		 * 1. stateManagerCopy - used by action services
+		 * 2. vmCopy.vm.stateManager - used by VM for EVM execution
 		 *
-		 * If you need direct VM operations with synchronized state, consider:
-		 * 1. Using the action services exclusively
-		 * 2. Creating snapshots and reverting instead of deepCopy
+		 * This caused state inconsistency where setAccount() changes wouldn't be visible
+		 * to subsequent EVM calls. The fix extracts the stateManager from the copied VM
+		 * and uses it for both action services and EVM execution.
 		 */
 		deepCopy: () =>
 			Effect.gen(function* () {
-				// Create deep copies of all state
-				// NOTE: stateManagerCopy and vmCopy.vm.stateManager are DIFFERENT instances
-				// because VM.deepCopy() creates its own copy of the stateManager internally.
-				// Action services are bound to stateManagerCopy for consistency.
-				const stateManagerCopy = yield* stateManager.deepCopy()
+				// CRITICAL FIX (Issue #R125-P4-001): Create VM copy FIRST
+				// The VM.deepCopy() internally creates its own stateManager copy.
+				// We extract that stateManager and use it for action services to ensure
+				// both VM execution and action services operate on the SAME state.
 				const vmCopy = yield* vm.deepCopy()
+
+				// Extract the stateManager from the copied VM and wrap it in a StateManagerShape
+				// This ensures action services (getAccount, setAccount, etc.) and EVM execution
+				// both operate on the SAME stateManager instance, preventing state inconsistency.
+				const stateManagerCopy = createStateManagerShape(
+					/** @type {import('@tevm/state').StateManager} */ (vmCopy.vm.stateManager)
+				)
+
 				// CRITICAL: Pass the copied stateManager to snapshotService.deepCopy() so that
 				// snapshot operations (takeSnapshot, revertToSnapshot) operate on the copied state,
 				// not the original state manager. (Issue #233, #234 fix)
@@ -731,7 +739,8 @@ const createMemoryClientShape = (deps) => {
 				}
 
 				// Return new shape with copied state
-				// Action services will be recreated with the new stateManagerCopy
+				// Action services will be recreated with the stateManagerCopy
+				// which is the SAME instance as vmCopy.vm.stateManager
 				return createMemoryClientShape({
 					stateManager: stateManagerCopy,
 					vm: vmCopy,

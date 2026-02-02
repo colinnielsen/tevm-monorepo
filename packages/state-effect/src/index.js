@@ -48,3 +48,6 @@ export { StateManagerService } from './StateManagerService.js'
 // Layers
 export { StateManagerLocal } from './StateManagerLocal.js'
 export { StateManagerLive } from './StateManagerLive.js'
+
+// Factory function for creating StateManagerShape from raw StateManager
+export { createStateManagerShape } from './wrapStateManager.js'
