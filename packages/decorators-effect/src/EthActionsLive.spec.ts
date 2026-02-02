@@ -718,6 +718,26 @@ describe('EthActionsLive', () => {
 			expect(mocks.evm.runCall).toHaveBeenCalled()
 		})
 
+		it('should estimate gas with a from address', async () => {
+			const { layer, mocks } = createTestLayer()
+
+			const params = {
+				to: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+				from: '0x0987654321098765432109876543210987654321' as `0x${string}`,
+				data: '0x1234' as `0x${string}`,
+			}
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.estimateGas(params)
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			// Base gas (21000) + execution gas (21000) with 10% buffer
+			expect(result).toBe(46200n)
+			expect(mocks.evm.runCall).toHaveBeenCalled()
+		})
+
 		it('should return block by number', async () => {
 			const vmMock = createMockVm()
 			const evmMock = createMockEvmService()

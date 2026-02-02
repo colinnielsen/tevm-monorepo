@@ -190,6 +190,8 @@
  * @property {() => import('effect').Effect.Effect<string, import('@tevm/errors-effect').InternalError, never>} dumpState - Dump VM state
  * @property {(state: string) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} loadState - Load VM state
  * @property {(options?: { blocks?: number }) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} mine - Mine blocks
+ * @property {() => import('effect').Effect.Effect<Hex, import('@tevm/errors-effect').InternalError, never>} snapshot - Take a snapshot of the current EVM state (anvil_snapshot)
+ * @property {(id: Hex) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} revert - Revert to a previously saved snapshot (anvil_revert)
  */
 
 /**

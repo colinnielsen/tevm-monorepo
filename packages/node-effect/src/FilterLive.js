@@ -502,9 +502,14 @@ export const FilterLive = () => {
 									installed: { ...filter.installed },
 									// Deep copy arrays with individual object copies - must deep copy topics array
 									logs: filter.logs.map((log) => ({ ...log, topics: [...log.topics] })),
-									// tx and blocks are unknown[] - cast to object for spreading
-									tx: filter.tx.map((t) => ({ .../** @type {object} */ (t) })),
-									blocks: filter.blocks.map((b) => ({ .../** @type {object} */ (b) })),
+									// tx and blocks are unknown[] - check if object before spreading (#R127-P3-001 fix)
+									// Primitives (strings, numbers) must be preserved as-is, not spread
+									tx: filter.tx.map((t) =>
+										t !== null && typeof t === 'object' ? { .../** @type {object} */ (t) } : t,
+									),
+									blocks: filter.blocks.map((b) =>
+										b !== null && typeof b === 'object' ? { .../** @type {object} */ (b) } : b,
+									),
 									// Issue #257 fix: Clear listeners for true isolation - functions can't be cloned
 									// and shared listeners would cause cross-copy event handling issues
 									registeredListeners: [],

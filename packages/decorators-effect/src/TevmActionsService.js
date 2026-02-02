@@ -24,6 +24,8 @@ import { Context } from 'effect'
  * - `dumpState` - Dump entire VM state
  * - `loadState` - Load previously dumped state
  * - `mine` - Mine blocks
+ * - `snapshot` - Take a snapshot (anvil_snapshot)
+ * - `revert` - Revert to snapshot (anvil_revert)
  *
  * @example
  * ```javascript

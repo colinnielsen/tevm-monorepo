@@ -8,6 +8,7 @@ import { EvmService } from '@tevm/evm-effect'
 import { BlockchainService } from '@tevm/blockchain-effect'
 import { CommonService } from '@tevm/common-effect'
 import { GetAccountService, SetAccountService } from '@tevm/actions-effect'
+import { SnapshotService } from '@tevm/node-effect'
 
 describe('TevmActionsLive', () => {
 	const createMockVm = () => {
@@ -151,6 +152,11 @@ describe('TevmActionsLive', () => {
 		copy: vi.fn(() => ({} as any)),
 	})
 
+	const createMockSnapshot = () => ({
+		takeSnapshot: vi.fn(() => Effect.succeed('0x1' as const)),
+		revertToSnapshot: vi.fn(() => Effect.succeed(undefined)),
+	})
+
 	const createTestLayer = () => {
 		const vmMock = createMockVm()
 		const stateManagerMock = createMockStateManager()
@@ -159,6 +165,7 @@ describe('TevmActionsLive', () => {
 		const evmMock = createMockEvm()
 		const blockchainMock = createMockBlockchain()
 		const commonMock = createMockCommon()
+		const snapshotMock = createMockSnapshot()
 
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
@@ -166,6 +173,7 @@ describe('TevmActionsLive', () => {
 			Layer.succeed(EvmService, evmMock as any),
 			Layer.succeed(BlockchainService, blockchainMock as any),
 			Layer.succeed(CommonService, commonMock as any),
+			Layer.succeed(SnapshotService, snapshotMock as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -178,6 +186,7 @@ describe('TevmActionsLive', () => {
 				evm: evmMock,
 				blockchain: blockchainMock,
 				common: commonMock,
+				snapshot: snapshotMock,
 				getAccount: getAccountMock,
 				setAccount: setAccountMock,
 			},
@@ -425,6 +434,7 @@ describe('TevmActionsLive', () => {
 			Layer.succeed(EvmService, evmMock as any),
 			Layer.succeed(BlockchainService, blockchainMock as any),
 			Layer.succeed(CommonService, commonMock as any),
+			Layer.succeed(SnapshotService, createMockSnapshot() as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -462,6 +472,7 @@ describe('TevmActionsLive', () => {
 			Layer.succeed(EvmService, evmMock as any),
 			Layer.succeed(BlockchainService, blockchainMock as any),
 			Layer.succeed(CommonService, commonMock as any),
+			Layer.succeed(SnapshotService, createMockSnapshot() as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -509,6 +520,7 @@ describe('TevmActionsLive', () => {
 			Layer.succeed(EvmService, evmMock as any),
 			Layer.succeed(BlockchainService, blockchainMock as any),
 			Layer.succeed(CommonService, commonMock as any),
+			Layer.succeed(SnapshotService, createMockSnapshot() as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -611,6 +623,58 @@ describe('TevmActionsLive', () => {
 		expect(loadedState['0x1234567890123456789012345678901234567890'].balance).toBe(0n)
 	})
 
+	it('should return InternalError for invalid nonce hex string in loadState (Issue #P4-379)', async () => {
+		const { layer } = createTestLayer()
+
+		// Invalid nonce hex string that will fail BigInt conversion
+		const stateJson = JSON.stringify({
+			'0x1234567890123456789012345678901234567890': {
+				nonce: 'not_a_valid_hex_or_number', // Invalid - cannot convert to BigInt
+				balance: '0x0',
+				storageRoot: '0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421',
+				codeHash: '0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470',
+			},
+		})
+
+		const program = Effect.gen(function* () {
+			const tevmActions = yield* TevmActionsService
+			return yield* tevmActions.loadState(stateJson)
+		})
+
+		const result = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+		expect(result._tag).toBe('Failure')
+		if (result._tag === 'Failure' && result.cause._tag === 'Fail') {
+			expect((result.cause.error as any)._tag).toBe('InternalError')
+			expect((result.cause.error as any).message).toContain('Failed to convert nonce to BigInt')
+		}
+	})
+
+	it('should return InternalError for invalid balance hex string in loadState (Issue #P4-379)', async () => {
+		const { layer } = createTestLayer()
+
+		// Invalid balance hex string that will fail BigInt conversion
+		const stateJson = JSON.stringify({
+			'0x1234567890123456789012345678901234567890': {
+				nonce: '0x0',
+				balance: 'invalid_balance_value', // Invalid - cannot convert to BigInt
+				storageRoot: '0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421',
+				codeHash: '0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470',
+			},
+		})
+
+		const program = Effect.gen(function* () {
+			const tevmActions = yield* TevmActionsService
+			return yield* tevmActions.loadState(stateJson)
+		})
+
+		const result = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+		expect(result._tag).toBe('Failure')
+		if (result._tag === 'Failure' && result.cause._tag === 'Fail') {
+			expect((result.cause.error as any)._tag).toBe('InternalError')
+			expect((result.cause.error as any).message).toContain('Failed to convert balance to BigInt')
+		}
+	})
+
 	it('should handle loadState with missing storageRoot/codeHash fields', async () => {
 		const { layer, mocks } = createTestLayer()
 
@@ -665,6 +729,7 @@ describe('TevmActionsLive', () => {
 			Layer.succeed(EvmService, evmMock as any),
 			Layer.succeed(BlockchainService, blockchainMock as any),
 			Layer.succeed(CommonService, commonMock as any),
+			Layer.succeed(SnapshotService, createMockSnapshot() as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -701,6 +766,7 @@ describe('TevmActionsLive', () => {
 			Layer.succeed(EvmService, evmMock as any),
 			Layer.succeed(BlockchainService, blockchainMock as any),
 			Layer.succeed(CommonService, commonMock as any),
+			Layer.succeed(SnapshotService, createMockSnapshot() as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -735,6 +801,7 @@ describe('TevmActionsLive', () => {
 			Layer.succeed(EvmService, evmMock as any),
 			Layer.succeed(BlockchainService, blockchainMock as any),
 			Layer.succeed(CommonService, commonMock as any),
+			Layer.succeed(SnapshotService, createMockSnapshot() as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -773,6 +840,7 @@ describe('TevmActionsLive', () => {
 			Layer.succeed(EvmService, evmMock as any),
 			Layer.succeed(BlockchainService, blockchainMock as any),
 			Layer.succeed(CommonService, commonMock as any),
+			Layer.succeed(SnapshotService, createMockSnapshot() as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -807,6 +875,7 @@ describe('TevmActionsLive', () => {
 			Layer.succeed(EvmService, evmMock as any),
 			Layer.succeed(BlockchainService, blockchainMock as any),
 			Layer.succeed(CommonService, commonMock as any),
+			Layer.succeed(SnapshotService, createMockSnapshot() as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -934,6 +1003,7 @@ describe('TevmActionsLive', () => {
 				Layer.succeed(EvmService, evmMock as any),
 				Layer.succeed(BlockchainService, blockchainMock as any),
 				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(SnapshotService, createMockSnapshot() as any),
 				Layer.succeed(GetAccountService, getAccountMock as any),
 				Layer.succeed(SetAccountService, setAccountMock as any)
 			)
@@ -996,6 +1066,161 @@ describe('TevmActionsLive', () => {
 				const error = exit.cause.error
 				expect(error._tag).toBe('InvalidParamsError')
 				expect((error as any).message).toContain("Invalid 'data' hex")
+			}
+		})
+	})
+
+	describe('snapshot and revert', () => {
+		it('should take a snapshot via SnapshotService', async () => {
+			const { layer, mocks } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const tevmActions = yield* TevmActionsService
+				return yield* tevmActions.snapshot()
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).toBe('0x1')
+			expect(mocks.snapshot.takeSnapshot).toHaveBeenCalled()
+		})
+
+		it('should revert to a snapshot via SnapshotService', async () => {
+			const { layer, mocks } = createTestLayer()
+
+			const snapshotId = '0x1' as const
+
+			const program = Effect.gen(function* () {
+				const tevmActions = yield* TevmActionsService
+				return yield* tevmActions.revert(snapshotId)
+			})
+
+			await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(mocks.snapshot.revertToSnapshot).toHaveBeenCalledWith(snapshotId)
+		})
+
+		it('should handle snapshot error from SnapshotService', async () => {
+			const vmMock = createMockVm()
+			const stateManagerMock = createMockStateManager()
+			const getAccountMock = createMockGetAccountService()
+			const setAccountMock = createMockSetAccountService()
+			const evmMock = createMockEvm()
+			const blockchainMock = createMockBlockchain()
+			const commonMock = createMockCommon()
+
+			// Mock SnapshotService to fail on takeSnapshot
+			const snapshotMock = {
+				takeSnapshot: vi.fn(() => Effect.fail(new Error('Snapshot failed'))),
+				revertToSnapshot: vi.fn(() => Effect.succeed(undefined)),
+			}
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(SnapshotService, snapshotMock as any),
+				Layer.succeed(GetAccountService, getAccountMock as any),
+				Layer.succeed(SetAccountService, setAccountMock as any)
+			)
+
+			const layer = Layer.provide(TevmActionsLive, mockLayer)
+
+			const program = Effect.gen(function* () {
+				const tevmActions = yield* TevmActionsService
+				return yield* tevmActions.snapshot()
+			})
+
+			const result = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(result._tag).toBe('Failure')
+			if (result._tag === 'Failure' && result.cause._tag === 'Fail') {
+				expect((result.cause.error as any)._tag).toBe('InternalError')
+				expect((result.cause.error as any).message).toContain('Failed to take snapshot')
+			}
+		})
+
+		it('should handle revert error from SnapshotService', async () => {
+			const vmMock = createMockVm()
+			const stateManagerMock = createMockStateManager()
+			const getAccountMock = createMockGetAccountService()
+			const setAccountMock = createMockSetAccountService()
+			const evmMock = createMockEvm()
+			const blockchainMock = createMockBlockchain()
+			const commonMock = createMockCommon()
+
+			// Mock SnapshotService to fail on revertToSnapshot
+			const snapshotMock = {
+				takeSnapshot: vi.fn(() => Effect.succeed('0x1' as const)),
+				revertToSnapshot: vi.fn(() => Effect.fail(new Error('Revert failed'))),
+			}
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(SnapshotService, snapshotMock as any),
+				Layer.succeed(GetAccountService, getAccountMock as any),
+				Layer.succeed(SetAccountService, setAccountMock as any)
+			)
+
+			const layer = Layer.provide(TevmActionsLive, mockLayer)
+
+			const program = Effect.gen(function* () {
+				const tevmActions = yield* TevmActionsService
+				return yield* tevmActions.revert('0x1' as const)
+			})
+
+			const result = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(result._tag).toBe('Failure')
+			if (result._tag === 'Failure' && result.cause._tag === 'Fail') {
+				expect((result.cause.error as any)._tag).toBe('InternalError')
+				expect((result.cause.error as any).message).toContain('Failed to revert to snapshot')
+			}
+		})
+
+		it('should return InvalidParamsError when snapshot not found', async () => {
+			const vmMock = createMockVm()
+			const stateManagerMock = createMockStateManager()
+			const getAccountMock = createMockGetAccountService()
+			const setAccountMock = createMockSetAccountService()
+			const evmMock = createMockEvm()
+			const blockchainMock = createMockBlockchain()
+			const commonMock = createMockCommon()
+
+			// Create a mock error that looks like SnapshotNotFoundError
+			const snapshotNotFoundError = { _tag: 'SnapshotNotFoundError', message: 'Snapshot not found' }
+
+			// Mock SnapshotService to fail with SnapshotNotFoundError
+			const snapshotMock = {
+				takeSnapshot: vi.fn(() => Effect.succeed('0x1' as const)),
+				revertToSnapshot: vi.fn(() => Effect.fail(snapshotNotFoundError)),
+			}
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(SnapshotService, snapshotMock as any),
+				Layer.succeed(GetAccountService, getAccountMock as any),
+				Layer.succeed(SetAccountService, setAccountMock as any)
+			)
+
+			const layer = Layer.provide(TevmActionsLive, mockLayer)
+
+			const program = Effect.gen(function* () {
+				const tevmActions = yield* TevmActionsService
+				return yield* tevmActions.revert('0x999' as const)
+			})
+
+			const result = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(result._tag).toBe('Failure')
+			if (result._tag === 'Failure' && result.cause._tag === 'Fail') {
+				expect((result.cause.error as any)._tag).toBe('InvalidParamsError')
+				expect((result.cause.error as any).message).toContain('Snapshot not found')
 			}
 		})
 	})

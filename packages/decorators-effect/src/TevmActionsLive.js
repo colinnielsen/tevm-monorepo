@@ -10,11 +10,12 @@ import { VmService } from '@tevm/vm-effect'
 import { EvmService } from '@tevm/evm-effect'
 import { BlockchainService } from '@tevm/blockchain-effect'
 import { CommonService } from '@tevm/common-effect'
+import { SnapshotService } from '@tevm/node-effect'
 import {
 	GetAccountService,
 	SetAccountService,
 } from '@tevm/actions-effect'
-import { InternalError, InvalidParamsError } from '@tevm/errors-effect'
+import { InternalError, InvalidParamsError, SnapshotNotFoundError } from '@tevm/errors-effect'
 
 /**
  * Live implementation of TevmActionsService.
@@ -49,7 +50,7 @@ import { InternalError, InvalidParamsError } from '@tevm/errors-effect'
  * ```
  *
  */
-export const TevmActionsLive = /** @type {Layer.Layer<import('./TevmActionsService.js').TevmActionsServiceId, never, import('@tevm/state-effect').StateManagerService | import('@tevm/vm-effect').VmService | import('@tevm/evm-effect').EvmService | import('@tevm/blockchain-effect').BlockchainService | import('@tevm/common-effect').CommonService | import('@tevm/actions-effect').GetAccountService | import('@tevm/actions-effect').SetAccountService>} */ (Layer.effect(
+export const TevmActionsLive = /** @type {Layer.Layer<import('./TevmActionsService.js').TevmActionsServiceId, never, import('@tevm/state-effect').StateManagerService | import('@tevm/vm-effect').VmService | import('@tevm/evm-effect').EvmService | import('@tevm/blockchain-effect').BlockchainService | import('@tevm/common-effect').CommonService | import('@tevm/node-effect').SnapshotService | import('@tevm/actions-effect').GetAccountService | import('@tevm/actions-effect').SetAccountService>} */ (Layer.effect(
 	TevmActionsService,
 	Effect.gen(function* () {
 		const stateManager = yield* StateManagerService
@@ -57,6 +58,7 @@ export const TevmActionsLive = /** @type {Layer.Layer<import('./TevmActionsServi
 		const evm = yield* EvmService
 		const blockchain = yield* BlockchainService
 		const common = yield* CommonService
+		const snapshot = yield* SnapshotService
 		const getAccountService = yield* GetAccountService
 		const setAccountService = yield* SetAccountService
 
@@ -382,6 +384,34 @@ export const TevmActionsLive = /** @type {Layer.Layer<import('./TevmActionsServi
 						)
 					}
 				}),
+
+			// Snapshot methods for anvil_snapshot and anvil_revert (#R126-P4-004 fix)
+			snapshot: () =>
+				snapshot.takeSnapshot().pipe(
+					Effect.mapError((e) =>
+						new InternalError({
+							message: `Failed to take snapshot: ${e instanceof Error ? e.message : String(e)}`,
+							cause: e instanceof Error ? e : undefined,
+						})
+					)
+				),
+
+			revert: (id) =>
+				snapshot.revertToSnapshot(id).pipe(
+					Effect.mapError((e) => {
+						if (e instanceof SnapshotNotFoundError || (e && typeof e === 'object' && '_tag' in e && e._tag === 'SnapshotNotFoundError')) {
+							return new InvalidParamsError({
+								message: `Snapshot not found: ${id}`,
+								method: 'anvil_revert',
+								cause: e instanceof Error ? e : undefined,
+							})
+						}
+						return new InternalError({
+							message: `Failed to revert to snapshot: ${e instanceof Error ? e.message : String(e)}`,
+							cause: e instanceof Error ? e : undefined,
+						})
+					})
+				),
 		})
 	})
 ))

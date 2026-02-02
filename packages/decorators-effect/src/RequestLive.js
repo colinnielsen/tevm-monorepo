@@ -278,6 +278,29 @@ export const RequestLive = /** @type {Layer.Layer<import('./RequestService.js').
 							return /** @type {T} */ (null)
 						}
 
+						// Snapshot methods (#R126-P4-004 fix)
+						case 'anvil_snapshot':
+						case 'evm_snapshot': {
+							const result = yield* tevmActions.snapshot()
+							return /** @type {T} */ (result)
+						}
+
+						case 'anvil_revert':
+						case 'evm_revert': {
+							const [snapshotId] = /** @type {[string]} */ (rpcParams)
+							if (!snapshotId) {
+								return yield* Effect.fail(
+									new InvalidParamsError({
+										method: 'anvil_revert',
+										params: rpcParams,
+										message: 'Missing snapshot ID parameter',
+									})
+								)
+							}
+							yield* tevmActions.revert(/** @type {import('./types.js').Hex} */ (snapshotId))
+							return /** @type {T} */ (true)
+						}
+
 						default:
 							return yield* Effect.fail(
 								new MethodNotFoundError({

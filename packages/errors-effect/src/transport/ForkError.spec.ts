@@ -93,6 +93,40 @@ describe('ForkError', () => {
 		expect(ForkError.docsPath).toBe('/reference/tevm/errors/classes/forkerror/')
 	})
 
+	describe('extractCodeFromCause', () => {
+		it('should return default code when cause is null', () => {
+			expect(ForkError.extractCodeFromCause(null)).toBe(-32604)
+		})
+
+		it('should return default code when cause is undefined', () => {
+			expect(ForkError.extractCodeFromCause(undefined)).toBe(-32604)
+		})
+
+		it('should return default code when cause is a string (non-object)', () => {
+			expect(ForkError.extractCodeFromCause('some error string')).toBe(-32604)
+		})
+
+		it('should return default code when cause is a number (non-object)', () => {
+			expect(ForkError.extractCodeFromCause(42)).toBe(-32604)
+		})
+
+		it('should return default code when cause has no code property', () => {
+			expect(ForkError.extractCodeFromCause({ message: 'error' })).toBe(-32604)
+		})
+
+		it('should return default code when cause.code is a string (non-number)', () => {
+			expect(ForkError.extractCodeFromCause({ code: 'ERROR' })).toBe(-32604)
+		})
+
+		it('should return default code when cause.code is null', () => {
+			expect(ForkError.extractCodeFromCause({ code: null })).toBe(-32604)
+		})
+
+		it('should return cause.code when it is a valid number', () => {
+			expect(ForkError.extractCodeFromCause({ code: -32000 })).toBe(-32000)
+		})
+	})
+
 	it('should NOT be frozen (for Effect trait compatibility)', () => {
 		const error = new ForkError({})
 

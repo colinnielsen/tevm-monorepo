@@ -39,6 +39,35 @@ export class ForkError extends Data.TaggedError('ForkError') {
 	static docsPath = '/reference/tevm/errors/classes/forkerror/'
 
 	/**
+	 * Safely extract error code from a cause object.
+	 * This method provides explicit type guards to handle various cause structures
+	 * without silent failures if the cause shape changes (#R127-P1-001 fix).
+	 *
+	 * @param {unknown} cause - The underlying cause of the error
+	 * @returns {number} The extracted code or the default ForkError.code
+	 */
+	static extractCodeFromCause(cause) {
+		// Guard 1: cause must exist
+		if (cause === null || cause === undefined) {
+			return ForkError.code
+		}
+		// Guard 2: cause must be an object
+		if (typeof cause !== 'object') {
+			return ForkError.code
+		}
+		// Guard 3: cause must have a 'code' property
+		if (!('code' in cause)) {
+			return ForkError.code
+		}
+		// Guard 4: code must be a number
+		const causeCode = /** @type {{ code: unknown }} */ (cause).code
+		if (typeof causeCode !== 'number') {
+			return ForkError.code
+		}
+		return causeCode
+	}
+
+	/**
 	 * The JSON-RPC method that was being called when the error occurred
 	 * @readonly
 	 * @type {string | undefined}
@@ -93,11 +122,9 @@ export class ForkError extends Data.TaggedError('ForkError') {
 			(props.method !== undefined
 				? `Fork request failed for method '${props.method}'`
 				: 'Fork request failed')
-		// If cause has a code, use it; otherwise use the static default
-		const code =
-			props.cause && typeof props.cause === 'object' && 'code' in props.cause && typeof props.cause.code === 'number'
-				? props.cause.code
-				: ForkError.code
+		// Extract code from cause safely with explicit type guards (#R127-P1-001 fix)
+		// This pattern handles various cause structures without silent failures
+		const code = ForkError.extractCodeFromCause(props.cause)
 		const docsPath = ForkError.docsPath
 
 		// Pass all properties to super() for Effect.ts equality and hashing

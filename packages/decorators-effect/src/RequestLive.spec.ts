@@ -93,6 +93,8 @@ describe('RequestLive', () => {
 		dumpState: vi.fn(() => Effect.succeed('0x' as const)),
 		loadState: vi.fn(() => Effect.succeed(undefined)),
 		mine: vi.fn(() => Effect.succeed(undefined)),
+		snapshot: vi.fn(() => Effect.succeed('0x1' as const)),
+		revert: vi.fn(() => Effect.succeed(undefined)),
 	})
 
 	const createTestLayer = () => {
@@ -660,5 +662,86 @@ describe('RequestLive', () => {
 		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
 		expect(result).toBe('tevm/1.0.0')
 		expect(mocks.ethActions.web3ClientVersion).toHaveBeenCalled()
+	})
+
+	// Snapshot/revert tests (Issue #R126-P4-004)
+	it('should handle anvil_snapshot request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'anvil_snapshot',
+				params: [],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toBe('0x1')
+		expect(mocks.tevmActions.snapshot).toHaveBeenCalled()
+	})
+
+	it('should handle evm_snapshot request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'evm_snapshot',
+				params: [],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toBe('0x1')
+		expect(mocks.tevmActions.snapshot).toHaveBeenCalled()
+	})
+
+	it('should handle anvil_revert request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'anvil_revert',
+				params: ['0x1'],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toBe(true)
+		expect(mocks.tevmActions.revert).toHaveBeenCalledWith('0x1')
+	})
+
+	it('should handle evm_revert request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'evm_revert',
+				params: ['0x1'],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toBe(true)
+		expect(mocks.tevmActions.revert).toHaveBeenCalledWith('0x1')
+	})
+
+	it('should fail anvil_revert with missing snapshot ID', async () => {
+		const { layer } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'anvil_revert',
+				params: [],
+			})
+		})
+
+		await expect(
+			Effect.runPromise(program.pipe(Effect.provide(layer)))
+		).rejects.toThrow('Missing snapshot ID parameter')
 	})
 })
