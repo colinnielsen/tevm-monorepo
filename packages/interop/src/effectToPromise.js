@@ -7,28 +7,25 @@ import { Effect, Runtime } from 'effect'
  * This is useful during migration when you have Effect-based internal code
  * but need to maintain Promise-based public APIs.
  *
- * **⚠️ CRITICAL: Effects with requirements (R !== never) require a custom runtime!**
+ * **Type-Safe Runtime Requirements:**
  *
- * If your Effect requires services (R type parameter is not `never`), you MUST
- * provide a runtime that satisfies those requirements. The default runtime only
- * works for Effects with no requirements (`Effect<A, E, never>`).
- *
- * Using the default runtime with an Effect that has requirements will:
- * - Compile without errors (due to type casting)
- * - **FAIL AT RUNTIME** with a missing service error
+ * This function uses TypeScript overloads to enforce type safety:
+ * - Effects with no requirements (`Effect<A, E, never>`) can use the default runtime
+ * - Effects with requirements (`Effect<A, E, R>`) MUST provide a compatible runtime
  *
  * ```typescript
- * // ❌ WILL FAIL AT RUNTIME - Effect requires FooService but default runtime doesn't have it
- * const effect: Effect<string, never, FooService> = ...
- * const result = await effectToPromise(effect) // Runtime error!
+ * // ✅ Effect with no requirements - default runtime works
+ * const simple = Effect.succeed(42)
+ * await effectToPromise(simple)
  *
- * // ✅ CORRECT - Provide a runtime that has FooService
- * const managedRuntime = ManagedRuntime.make(FooServiceLive)
- * const result = await effectToPromise(effect, await managedRuntime.runtime())
+ * // ✅ Effect with requirements - must provide runtime
+ * const withService: Effect<string, never, FooService> = ...
+ * const runtime = await ManagedRuntime.make(FooServiceLive).runtime()
+ * await effectToPromise(withService, runtime)
  *
- * // ✅ ALSO CORRECT - Provide all dependencies before converting
- * const satisfiedEffect = effect.pipe(Effect.provide(FooServiceLive))
- * const result = await effectToPromise(satisfiedEffect) // R is now never
+ * // ✅ Provide dependencies before converting
+ * const satisfied = withService.pipe(Effect.provide(FooServiceLive))
+ * await effectToPromise(satisfied) // R is now never
  * ```
  *
  * @example
@@ -65,20 +62,45 @@ import { Effect, Runtime } from 'effect'
  * const result = await effectToPromise(program, await managedRuntime.runtime())
  * console.log(result) // 'hello'
  * ```
- *
+ */
+
+/**
+ * Overload 1: Effect with no requirements - runtime is optional (uses default)
  * @template A - The success type of the Effect
  * @template E - The error type of the Effect
- * @template R - The requirements type of the Effect (must be satisfied by the runtime)
- * @param {Effect.Effect<A, E, R>} effect - The Effect to convert
- * @param {Runtime.Runtime<R>} [runtime] - Optional runtime to use. Defaults to defaultRuntime. **MUST be provided if R !== never!**
- * @returns {Promise<A>} A Promise that resolves with the Effect's success value or rejects with the error
+ * @param {Effect.Effect<A, E, never>} effect - The Effect to convert (must have no requirements)
+ * @param {Runtime.Runtime<never>} [runtime] - Optional runtime (defaults to defaultRuntime)
+ * @returns {Promise<A>} A Promise that resolves with the Effect's success value
  * @throws {TypeError} If effect parameter is null or undefined
- * @throws {E} Rejects with the Effect's error type if the effect fails
- * @throws Will throw a runtime error if the Effect has requirements (R !== never) and no custom runtime is provided
+ * @overload
  */
-export const effectToPromise = (effect, runtime = /** @type {Runtime.Runtime<any>} */ (Runtime.defaultRuntime)) => {
+
+/**
+ * Overload 2: Effect with requirements - runtime is required
+ * @template A - The success type of the Effect
+ * @template E - The error type of the Effect
+ * @template R - The requirements type of the Effect
+ * @param {Effect.Effect<A, E, R>} effect - The Effect to convert
+ * @param {Runtime.Runtime<R>} runtime - Runtime that satisfies the Effect's requirements (REQUIRED)
+ * @returns {Promise<A>} A Promise that resolves with the Effect's success value
+ * @throws {TypeError} If effect parameter is null or undefined
+ * @overload
+ */
+
+/**
+ * Implementation signature
+ * @template A - The success type of the Effect
+ * @template E - The error type of the Effect
+ * @template R - The requirements type of the Effect
+ * @param {Effect.Effect<A, E, R>} effect - The Effect to convert
+ * @param {Runtime.Runtime<R>} [runtime] - Runtime to use
+ * @returns {Promise<A>} A Promise that resolves with the Effect's success value
+ */
+export const effectToPromise = (effect, runtime) => {
 	if (effect === null || effect === undefined) {
 		return Promise.reject(new TypeError('effectToPromise: effect parameter is required and cannot be null or undefined'))
 	}
-	return Runtime.runPromise(runtime)(effect)
+	// Use the provided runtime, or default runtime for effects with no requirements
+	const actualRuntime = runtime ?? /** @type {Runtime.Runtime<R>} */ (Runtime.defaultRuntime)
+	return Runtime.runPromise(actualRuntime)(effect)
 }

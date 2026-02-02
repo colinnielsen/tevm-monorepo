@@ -10,6 +10,12 @@ import { Context } from 'effect'
  */
 
 /**
+ * LoggerService identifier type for Effect Context.Tag.
+ * This branded type ensures type-safe service identification in Effect's dependency injection.
+ * @typedef {{ readonly _tag: '@tevm/logger-effect/LoggerService' }} LoggerServiceId
+ */
+
+/**
  * The LoggerService Context.Tag for Effect.ts dependency injection.
  *
  * This service provides type-safe, composable logging throughout TEVM's Effect pipelines.
@@ -43,7 +49,8 @@ import { Context } from 'effect'
  * })
  * ```
  *
+ * @type {import('effect').Context.Tag<LoggerServiceId, LoggerShape>}
  */
-export const LoggerService = Context.GenericTag(
-	'@tevm/logger-effect/LoggerService'
+export const LoggerService = /** @type {import('effect').Context.Tag<LoggerServiceId, LoggerShape>} */ (
+	Context.GenericTag('@tevm/logger-effect/LoggerService')
 )

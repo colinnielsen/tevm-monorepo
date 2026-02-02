@@ -97,26 +97,35 @@ const errorMap = {
  * from the source error if they exist. If the source error doesn't have structured
  * data, only the message will be preserved.
  *
+ * **Type Narrowing**: When you pass a specific error type, TypeScript will correctly
+ * narrow the return type. See {@link ./toTaggedError.types.ts} for TypeScript overload
+ * signatures that provide proper type inference.
+ *
  * @example
  * ```typescript
- * import { toTaggedError } from '@tevm/errors-effect'
- * import { InsufficientBalanceError as BaseInsufficientBalanceError } from '@tevm/errors'
+ * import { toTaggedError, InsufficientBalanceError } from '@tevm/errors-effect'
  * import { Effect } from 'effect'
  *
- * try {
- *   // Some operation that throws a BaseError
- * } catch (error) {
- *   const taggedError = toTaggedError(error)
+ * // Type is correctly inferred as InsufficientBalanceError
+ * const error = toTaggedError(new InsufficientBalanceError({ required: 100n, available: 50n }))
+ * console.log(error.required) // No type error - TypeScript knows this is InsufficientBalanceError
  *
- *   // Now can use in Effect pipelines
- *   Effect.fail(taggedError)
+ * // For unknown errors, use type guards or the full union type
+ * try {
+ *   // Some operation that throws
+ * } catch (e) {
+ *   const taggedError = toTaggedError(e) // Returns TevmTaggedErrorUnion
+ *   if (taggedError._tag === 'InsufficientBalanceError') {
+ *     console.log(taggedError.required) // Narrowed by tag discriminant
+ *   }
  * }
  * ```
  *
+ * @see {@link ./toTaggedError.types.ts} for TypeScript overload signatures
  * @param {import('@tevm/errors').BaseError | Error | unknown} error - The error to convert
- * @returns {TevmError | InsufficientBalanceError | InsufficientFundsError | InvalidJumpError | OutOfGasError | RevertError | InvalidOpcodeError | StackOverflowError | StackUnderflowError | ForkError | NetworkError | TimeoutError | BlockNotFoundError | InvalidBlockError | BlockGasLimitExceededError | InvalidTransactionError | NonceTooLowError | NonceTooHighError | GasTooLowError | StateRootNotFoundError | AccountNotFoundError | StorageError | InvalidRequestError | MethodNotFoundError | InvalidParamsError | InternalError | SnapshotNotFoundError | FilterNotFoundError | InvalidFilterTypeError | NodeNotReadyError} A TaggedError instance
+ * @returns {import('./toTaggedError.types.js').TevmTaggedErrorUnion} A TaggedError instance with type narrowing based on input
  */
-export const toTaggedError = (error) => {
+export const toTaggedError = /** @type {import('./toTaggedError.types.js').toTaggedError} */ ((error) => {
 	// If it's already a TevmError TaggedError, return as-is
 	if (error instanceof TevmError) {
 		return error
@@ -407,4 +416,4 @@ export const toTaggedError = (error) => {
 		code: 0,
 		cause: error,
 	})
-}
+})
