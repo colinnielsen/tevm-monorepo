@@ -116,7 +116,31 @@ describe('effectToPromise', () => {
 			})
 
 			// Using default runtime should fail since MissingService is not provided
+			// The error message should be enhanced to guide the user
 			await expect(effectToPromise(effect)).rejects.toThrow()
+		})
+
+		it('should provide enhanced error message for service access errors without runtime', async () => {
+			// Define a service that won't be provided
+			class UnprovidedService extends Context.Tag('UnprovidedService')<UnprovidedService, { data: string }>() {}
+
+			// Effect that requires the service
+			const effect = Effect.gen(function* () {
+				const svc = yield* UnprovidedService
+				return svc.data
+			})
+
+			// The error should indicate that a runtime is needed for Effects with requirements
+			try {
+				await effectToPromise(effect)
+				// Should not reach here
+				expect.fail('Expected effectToPromise to reject')
+			} catch (error: any) {
+				// Check that the error message mentions the service issue
+				expect(error.message).toContain('Effect failed accessing a service')
+				expect(error.message).toContain('provide a runtime')
+				expect(error.cause).toBeDefined()
+			}
 		})
 
 		it('should work when Effect requirements are satisfied with Effect.provide before conversion', async () => {

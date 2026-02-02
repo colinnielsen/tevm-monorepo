@@ -100,7 +100,32 @@ export const effectToPromise = (effect, runtime) => {
 	if (effect === null || effect === undefined) {
 		return Promise.reject(new TypeError('effectToPromise: effect parameter is required and cannot be null or undefined'))
 	}
-	// Use the provided runtime, or default runtime for effects with no requirements
-	const actualRuntime = runtime ?? /** @type {Runtime.Runtime<R>} */ (Runtime.defaultRuntime)
-	return Runtime.runPromise(actualRuntime)(effect)
+	// Type-safe design: TypeScript overloads ensure runtime is required when Effect has requirements.
+	// In JavaScript without type checking, missing runtime for Effects with requirements will cause
+	// a runtime error when the Effect accesses missing services.
+	//
+	// Note: We use defaultRuntime (which has empty context) when runtime is not provided.
+	// This works for Effects with R=never but will fail for Effects that require services.
+	// The overloads above enforce type safety, but JavaScript users must ensure they
+	// provide a runtime for Effects with requirements.
+	const actualRuntime = runtime !== undefined ? runtime : Runtime.defaultRuntime
+	return Runtime.runPromise(actualRuntime)(effect).catch((error) => {
+		// Provide a more helpful error message for service access errors when no runtime was provided
+		if (runtime === undefined && error && typeof error.message === 'string') {
+			// Check for common Effect service-related error patterns
+			const isServiceError = error.message.includes('Service not found') ||
+				error.message.includes('is not available') ||
+				error._tag === 'ServiceNotFoundError'
+			if (isServiceError) {
+				const enhancedError = new Error(
+					`effectToPromise: Effect failed accessing a service. ` +
+					`If your Effect has requirements (R ≠ never), you must provide a runtime that satisfies them. ` +
+					`Original error: ${error.message}`
+				)
+				enhancedError.cause = error
+				throw enhancedError
+			}
+		}
+		throw error
+	})
 }

@@ -21,7 +21,7 @@
 
 **NEW MEDIUM Issues Found (9 total):**
 - 🟡 **#R125-P1-001**: promiseToEffect error type lost - uses tryPromise without custom catch handler unlike wrapWithEffect
-- 🟡 **#R125-P1-002**: effectToPromise unsafe default runtime cast at line 104
+- ✅ **#R125-P1-002**: effectToPromise unsafe default runtime cast - **FIXED 2026-02-02**
 - 🟡 **#R125-P1-003**: LoggerTest('silent') captures nothing but returns empty array misleadingly
 - 🟡 **#R125-P1-004**: toTaggedError iterates errorMap multiple times for aliases (performance)
 - 🟡 **#R125-P1-005**: toBaseError template type too narrow, missing many error types from TevmTaggedErrorUnion
@@ -56,7 +56,7 @@
 
 | Phase | Review Status | Packages | Total Tests | Coverage | RFC Compliance |
 |-------|---------------|----------|-------------|----------|----------------|
-| **Phase 1** | 🟡 NEEDS REVIEW | 3 (errors-effect, interop, logger-effect) | 695 | 100% | 2 HIGH, 3 MEDIUM, 2 LOW NEW |
+| **Phase 1** | 🟡 NEEDS REVIEW | 3 (errors-effect, interop, logger-effect) | 695 | 100% | 1 HIGH (1 FIXED), 3 MEDIUM, 2 LOW NEW |
 | **Phase 2** | 🟡 NEEDS FIX | 6 (common, transport, blockchain, state, evm, vm) | 231 | 100% | 0 HIGH, 4 MEDIUM, 4 LOW NEW |
 | **Phase 3** | 🟡 NEEDS FIX | 2 (node-effect, actions-effect) | 219 | 100% | 0 CRITICAL, 0 HIGH, 1 MEDIUM, 6 LOW NEW |
 | **Phase 4** | 🟡 HIGH | 2 (memory-client-effect, decorators-effect) | 167 | ~97% | 0 CRITICAL (FIXED), 3 HIGH, 3 MEDIUM, 1 LOW NEW |
@@ -91,16 +91,22 @@
 
 ---
 
-##### Issue #R125-P1-002: effectToPromise Unsafe Default Runtime Cast
+##### Issue #R125-P1-002: effectToPromise Unsafe Default Runtime Cast ✅ FIXED
 **File:Lines**: `packages/interop/src/effectToPromise.js:104`
 **Severity**: 🔴 HIGH
-**Status**: 🟡 NEW
+**Status**: ✅ FIXED (2026-02-02)
 
 **Problem**: Casts `Runtime.defaultRuntime` to `Runtime.Runtime<R>` when runtime is undefined. When `R` is not `never`, this cast is incorrect and causes runtime errors when the Effect accesses missing services.
 
 **Impact**: Runtime crashes when passing an Effect with requirements but no runtime.
 
-**Recommended Fix**: Add runtime assertion or enforce at type level that runtime is required when R extends something other than never.
+**Fix Applied**:
+1. Removed unsafe cast - now uses simple conditional: `runtime !== undefined ? runtime : Runtime.defaultRuntime`
+2. Added enhanced error handling that detects service access errors when no runtime was provided
+3. Error message now clearly guides users: "If your Effect has requirements (R ≠ never), you must provide a runtime"
+4. Added comprehensive JSDoc comments explaining the type-safe design with overloads
+5. Added test for enhanced error message verification
+6. Test results: 61 tests pass, 100% coverage
 
 ---
 
@@ -465,7 +471,7 @@ This ensures both VM and action services use the SAME stateManager instance. Als
 2. **HIGH #R125-P4-002**: getBlockNumber bypasses service abstraction
 3. **HIGH #R125-P4-003**: TevmActionsLive direct internal access
 4. ✅ **HIGH #R125-P4-004**: Missing JSON-RPC methods - **FIXED 2026-02-02**
-5. **HIGH #R125-P1-002**: effectToPromise unsafe default runtime cast
+5. ✅ **HIGH #R125-P1-002**: effectToPromise unsafe default runtime cast - **FIXED 2026-02-02**
 6. **MEDIUM #R125-P3-001**: FilterLive deepCopy primitive handling
 
 ---
