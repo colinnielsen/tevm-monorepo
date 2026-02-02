@@ -20,11 +20,11 @@
 
 **128th REVIEW.** Deep Parallel Opus 4.5 comprehensive review. Found 5 HIGH (now FIXED), 5 MEDIUM, 13 LOW new issues.
 
-**NEW MEDIUM Issues Found (5 total - 1 FIXED):**
+**NEW MEDIUM Issues Found (5 total - 4 FIXED):**
 - 🟡 **#R128-P1-001**: toBaseError template type constraint is incomplete (omits many error types)
-- 🟡 **#R128-P2-006**: VmShape typedef missing error channel on deepCopy
-- 🟡 **#R128-P2-007**: StateManagerShape typedef missing error channel on deepCopy
-- 🟡 **#R128-P2-008**: BlockchainShape typedef missing error channel on deepCopy
+- ✅ **#R128-P2-006**: FIXED - VmShape typedef now declares VmError error channel on deepCopy
+- ✅ **#R128-P2-007**: FIXED - StateManagerShape typedef now declares InternalError error channel on deepCopy
+- ✅ **#R128-P2-008**: FIXED - BlockchainShape typedef now declares InvalidBlockError error channel on deepCopy
 - ✅ **#R128-P4-001**: FIXED - getBlockByNumber/getBlockByHash now return full transaction objects when includeTransactions=true (JSON-RPC compliant)
 
 **NEW LOW Issues Found (13 total):**
