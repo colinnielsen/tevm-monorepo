@@ -18,6 +18,52 @@ describe('RequestLive', () => {
 				'0x0000000000000000000000000000000000000000000000000000000000000000' as const
 			)
 		),
+		estimateGas: vi.fn(() => Effect.succeed(42000n)),
+		getBlockByNumber: vi.fn(() => Effect.succeed({
+			number: '0x64' as const,
+			hash: '0x1234' as const,
+			parentHash: '0x5678' as const,
+			nonce: '0x0' as const,
+			sha3Uncles: '0x0' as const,
+			logsBloom: '0x0' as const,
+			transactionsRoot: '0x0' as const,
+			stateRoot: '0x0' as const,
+			receiptsRoot: '0x0' as const,
+			miner: '0x0000000000000000000000000000000000000000' as const,
+			difficulty: '0x0' as const,
+			totalDifficulty: '0x0' as const,
+			extraData: '0x0' as const,
+			size: '0x0' as const,
+			gasLimit: '0x0' as const,
+			gasUsed: '0x0' as const,
+			timestamp: '0x0' as const,
+			transactions: [],
+			uncles: [],
+		})),
+		getBlockByHash: vi.fn(() => Effect.succeed({
+			number: '0x64' as const,
+			hash: '0x1234' as const,
+			parentHash: '0x5678' as const,
+			nonce: '0x0' as const,
+			sha3Uncles: '0x0' as const,
+			logsBloom: '0x0' as const,
+			transactionsRoot: '0x0' as const,
+			stateRoot: '0x0' as const,
+			receiptsRoot: '0x0' as const,
+			miner: '0x0000000000000000000000000000000000000000' as const,
+			difficulty: '0x0' as const,
+			totalDifficulty: '0x0' as const,
+			extraData: '0x0' as const,
+			size: '0x0' as const,
+			gasLimit: '0x0' as const,
+			gasUsed: '0x0' as const,
+			timestamp: '0x0' as const,
+			transactions: [],
+			uncles: [],
+		})),
+		accounts: vi.fn(() => Effect.succeed([])),
+		netVersion: vi.fn(() => Effect.succeed('1')),
+		web3ClientVersion: vi.fn(() => Effect.succeed('tevm/1.0.0')),
 	})
 
 	const createMockTevmActions = () => ({
@@ -469,5 +515,150 @@ describe('RequestLive', () => {
 
 		await Effect.runPromise(program.pipe(Effect.provide(layer)))
 		expect(mocks.tevmActions.mine).toHaveBeenCalledWith({ blocks: 1 })
+	})
+
+	// Tests for new JSON-RPC methods (Issue #R125-P4-004)
+	it('should handle eth_estimateGas request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_estimateGas',
+				params: [{ to: '0x1234567890123456789012345678901234567890', data: '0x1234' }],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toBe('0xa410') // 42000 in hex
+		expect(mocks.ethActions.estimateGas).toHaveBeenCalled()
+	})
+
+	it('should fail eth_estimateGas with missing params', async () => {
+		const { layer } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_estimateGas',
+				params: [],
+			})
+		})
+
+		await expect(
+			Effect.runPromise(program.pipe(Effect.provide(layer)))
+		).rejects.toThrow('Missing estimate gas parameters')
+	})
+
+	it('should handle eth_getBlockByNumber request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getBlockByNumber',
+				params: ['0x64', false],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect((result as any).number).toBe('0x64')
+		expect(mocks.ethActions.getBlockByNumber).toHaveBeenCalled()
+	})
+
+	it('should fail eth_getBlockByNumber with missing block tag', async () => {
+		const { layer } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getBlockByNumber',
+				params: [],
+			})
+		})
+
+		await expect(
+			Effect.runPromise(program.pipe(Effect.provide(layer)))
+		).rejects.toThrow('Missing block tag parameter')
+	})
+
+	it('should handle eth_getBlockByHash request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getBlockByHash',
+				params: ['0x1234567890123456789012345678901234567890123456789012345678901234', false],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect((result as any).number).toBe('0x64')
+		expect(mocks.ethActions.getBlockByHash).toHaveBeenCalled()
+	})
+
+	it('should fail eth_getBlockByHash with missing block hash', async () => {
+		const { layer } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getBlockByHash',
+				params: [],
+			})
+		})
+
+		await expect(
+			Effect.runPromise(program.pipe(Effect.provide(layer)))
+		).rejects.toThrow('Missing block hash parameter')
+	})
+
+	it('should handle eth_accounts request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_accounts',
+				params: [],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toEqual([])
+		expect(mocks.ethActions.accounts).toHaveBeenCalled()
+	})
+
+	it('should handle net_version request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'net_version',
+				params: [],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toBe('1')
+		expect(mocks.ethActions.netVersion).toHaveBeenCalled()
+	})
+
+	it('should handle web3_clientVersion request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'web3_clientVersion',
+				params: [],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toBe('tevm/1.0.0')
+		expect(mocks.ethActions.web3ClientVersion).toHaveBeenCalled()
 	})
 })

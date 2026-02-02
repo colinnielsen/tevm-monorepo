@@ -146,6 +146,72 @@ export const RequestLive = /** @type {Layer.Layer<import('./RequestService.js').
 							return /** @type {T} */ (result)
 						}
 
+						case 'eth_estimateGas': {
+							const [estimateParams] = /** @type {[any]} */ (rpcParams)
+							if (!estimateParams) {
+								return yield* Effect.fail(
+									new InvalidParamsError({
+										method: 'eth_estimateGas',
+										params: rpcParams,
+										message: 'Missing estimate gas parameters',
+									})
+								)
+							}
+							const result = yield* ethActions.estimateGas(estimateParams)
+							return /** @type {T} */ (`0x${result.toString(16)}`)
+						}
+
+						case 'eth_getBlockByNumber': {
+							const [blockTag, includeTransactions] = /** @type {[string, boolean | undefined]} */ (rpcParams)
+							if (blockTag === undefined) {
+								return yield* Effect.fail(
+									new InvalidParamsError({
+										method: 'eth_getBlockByNumber',
+										params: rpcParams,
+										message: 'Missing block tag parameter',
+									})
+								)
+							}
+							const result = yield* ethActions.getBlockByNumber({
+								blockTag: /** @type {import('./types.js').BlockParam} */ (blockTag),
+								includeTransactions: includeTransactions ?? false,
+							})
+							return /** @type {T} */ (result)
+						}
+
+						case 'eth_getBlockByHash': {
+							const [blockHash, includeTransactions] = /** @type {[string, boolean | undefined]} */ (rpcParams)
+							if (!blockHash) {
+								return yield* Effect.fail(
+									new InvalidParamsError({
+										method: 'eth_getBlockByHash',
+										params: rpcParams,
+										message: 'Missing block hash parameter',
+									})
+								)
+							}
+							const result = yield* ethActions.getBlockByHash({
+								blockHash: /** @type {import('./types.js').Hex} */ (blockHash),
+								includeTransactions: includeTransactions ?? false,
+							})
+							return /** @type {T} */ (result)
+						}
+
+						case 'eth_accounts': {
+							const result = yield* ethActions.accounts()
+							return /** @type {T} */ (result)
+						}
+
+						case 'net_version': {
+							const result = yield* ethActions.netVersion()
+							return /** @type {T} */ (result)
+						}
+
+						case 'web3_clientVersion': {
+							const result = yield* ethActions.web3ClientVersion()
+							return /** @type {T} */ (result)
+						}
+
 						// TEVM methods
 						case 'tevm_getAccount': {
 							const [accountParams] = /** @type {[any]} */ (rpcParams)

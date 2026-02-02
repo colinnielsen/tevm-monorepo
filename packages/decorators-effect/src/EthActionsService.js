@@ -25,6 +25,12 @@ import { Context } from 'effect'
  * - `getBalance` - Get account balance
  * - `getCode` - Get contract code
  * - `getStorageAt` - Get storage value
+ * - `estimateGas` - Estimate gas for a transaction
+ * - `getBlockByNumber` - Get block by number or tag
+ * - `getBlockByHash` - Get block by hash
+ * - `accounts` - Get list of accounts
+ * - `netVersion` - Get network version
+ * - `web3ClientVersion` - Get client version string
  *
  * @example
  * ```javascript

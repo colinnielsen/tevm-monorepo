@@ -53,6 +53,55 @@
  */
 
 /**
+ * Parameters for eth_estimateGas
+ * @typedef {Object} EthEstimateGasParams
+ * @property {Address} [to] - Target contract address
+ * @property {Address} [from] - Sender address
+ * @property {Hex} [data] - Call data
+ * @property {bigint} [gas] - Gas limit
+ * @property {bigint} [gasPrice] - Gas price
+ * @property {bigint} [value] - Value to send
+ */
+
+/**
+ * Parameters for eth_getBlockByNumber
+ * @typedef {Object} EthGetBlockByNumberParams
+ * @property {BlockParam} blockTag - Block number or tag
+ * @property {boolean} [includeTransactions] - Include full transaction objects
+ */
+
+/**
+ * Parameters for eth_getBlockByHash
+ * @typedef {Object} EthGetBlockByHashParams
+ * @property {Hex} blockHash - Block hash
+ * @property {boolean} [includeTransactions] - Include full transaction objects
+ */
+
+/**
+ * Block result type for JSON-RPC
+ * @typedef {Object} JsonRpcBlock
+ * @property {Hex} number - Block number as hex
+ * @property {Hex} hash - Block hash
+ * @property {Hex} parentHash - Parent block hash
+ * @property {Hex} nonce - Block nonce
+ * @property {Hex} sha3Uncles - SHA3 of uncles
+ * @property {Hex} logsBloom - Logs bloom filter
+ * @property {Hex} transactionsRoot - Transactions root
+ * @property {Hex} stateRoot - State root
+ * @property {Hex} receiptsRoot - Receipts root
+ * @property {Address} miner - Miner address
+ * @property {Hex} difficulty - Block difficulty
+ * @property {Hex} totalDifficulty - Total difficulty
+ * @property {Hex} extraData - Extra data
+ * @property {Hex} size - Block size
+ * @property {Hex} gasLimit - Gas limit
+ * @property {Hex} gasUsed - Gas used
+ * @property {Hex} timestamp - Block timestamp
+ * @property {Array<Hex | object>} transactions - Transactions (hashes or full objects)
+ * @property {Array<Hex>} uncles - Uncle block hashes
+ */
+
+/**
  * Shape of the EthActions service
  * @typedef {Object} EthActionsShape
  * @property {() => import('effect').Effect.Effect<bigint, import('@tevm/errors-effect').InternalError, never>} blockNumber - Get current block number
@@ -62,6 +111,12 @@
  * @property {(params: EthGetBalanceParams) => import('effect').Effect.Effect<bigint, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} getBalance - Get account balance
  * @property {(params: EthGetCodeParams) => import('effect').Effect.Effect<Hex, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} getCode - Get contract code
  * @property {(params: EthGetStorageAtParams) => import('effect').Effect.Effect<Hex, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} getStorageAt - Get storage value
+ * @property {(params: EthEstimateGasParams) => import('effect').Effect.Effect<bigint, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError | import('@tevm/errors-effect').RevertError | import('@tevm/errors-effect').OutOfGasError, never>} estimateGas - Estimate gas for a transaction
+ * @property {(params: EthGetBlockByNumberParams) => import('effect').Effect.Effect<JsonRpcBlock | null, import('@tevm/errors-effect').InternalError, never>} getBlockByNumber - Get block by number or tag
+ * @property {(params: EthGetBlockByHashParams) => import('effect').Effect.Effect<JsonRpcBlock | null, import('@tevm/errors-effect').InternalError, never>} getBlockByHash - Get block by hash
+ * @property {() => import('effect').Effect.Effect<Array<Address>, never, never>} accounts - Get list of accounts (returns empty array for in-memory client)
+ * @property {() => import('effect').Effect.Effect<string, never, never>} netVersion - Get network version (chain ID as string)
+ * @property {() => import('effect').Effect.Effect<string, never, never>} web3ClientVersion - Get client version string
  */
 
 /**

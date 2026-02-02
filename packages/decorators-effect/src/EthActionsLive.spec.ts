@@ -627,6 +627,492 @@ describe('EthActionsLive', () => {
 		})
 	})
 
+	describe('new JSON-RPC methods (Issue #R125-P4-004)', () => {
+		it('should return accounts as empty array', async () => {
+			const { layer } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.accounts()
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).toEqual([])
+		})
+
+		it('should return netVersion as chain ID string', async () => {
+			const { layer } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.netVersion()
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).toBe('1')
+		})
+
+		it('should return web3ClientVersion', async () => {
+			const { layer } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.web3ClientVersion()
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).toBe('tevm/1.0.0')
+		})
+
+		it('should estimate gas for a simple call', async () => {
+			const { layer, mocks } = createTestLayer()
+
+			const params = {
+				to: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+				data: '0x1234' as `0x${string}`,
+			}
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.estimateGas(params)
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			// Base gas (21000) + execution gas (21000) with 10% buffer
+			expect(result).toBe(46200n)
+			expect(mocks.vm.vm.evm.runCall).toHaveBeenCalled()
+		})
+
+		it('should return block by number', async () => {
+			const vmMock = createMockVm()
+			const commonMock = createMockCommon()
+			const stateManagerMock = createMockStateManager()
+			const getBalanceMock = createMockGetBalanceService()
+			const getCodeMock = createMockGetCodeService()
+			const getStorageAtMock = createMockGetStorageAtService()
+			const blockchainMock = createMockBlockchainService()
+
+			// Create a more complete mock block
+			const mockBlock = {
+				header: {
+					number: 100n,
+					parentHash: new Uint8Array(32),
+					nonce: new Uint8Array(8),
+					uncleHash: new Uint8Array(32),
+					logsBloom: new Uint8Array(256),
+					transactionsTrie: new Uint8Array(32),
+					stateRoot: new Uint8Array(32),
+					receiptTrie: new Uint8Array(32),
+					coinbase: { bytes: new Uint8Array(20) },
+					difficulty: 0n,
+					extraData: new Uint8Array(),
+					gasLimit: 30000000n,
+					gasUsed: 21000n,
+					timestamp: 1700000000n,
+				},
+				transactions: [],
+				uncleHeaders: [],
+				hash: () => new Uint8Array(32),
+				serialize: () => new Uint8Array(1000),
+			}
+
+			blockchainMock.getBlock.mockReturnValueOnce(Effect.succeed(mockBlock as any))
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(GetBalanceService, getBalanceMock as any),
+				Layer.succeed(GetCodeService, getCodeMock as any),
+				Layer.succeed(GetStorageAtService, getStorageAtMock as any)
+			)
+
+			const layer = Layer.provide(EthActionsLive, mockLayer)
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getBlockByNumber({
+					blockTag: 'latest',
+					includeTransactions: false,
+				})
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).not.toBeNull()
+			expect(result?.number).toBe('0x64')
+			expect(result?.gasLimit).toBe('0x1c9c380')
+		})
+
+		it('should return null for non-existent block by number', async () => {
+			const vmMock = createMockVm()
+			const commonMock = createMockCommon()
+			const stateManagerMock = createMockStateManager()
+			const getBalanceMock = createMockGetBalanceService()
+			const getCodeMock = createMockGetCodeService()
+			const getStorageAtMock = createMockGetStorageAtService()
+			const blockchainMock = createMockBlockchainService()
+
+			blockchainMock.getBlock.mockReturnValueOnce(Effect.fail(new Error('Block not found')))
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(GetBalanceService, getBalanceMock as any),
+				Layer.succeed(GetCodeService, getCodeMock as any),
+				Layer.succeed(GetStorageAtService, getStorageAtMock as any)
+			)
+
+			const layer = Layer.provide(EthActionsLive, mockLayer)
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getBlockByNumber({
+					blockTag: 9999n,
+					includeTransactions: false,
+				})
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).toBeNull()
+		})
+
+		it('should return block by hash', async () => {
+			const vmMock = createMockVm()
+			const commonMock = createMockCommon()
+			const stateManagerMock = createMockStateManager()
+			const getBalanceMock = createMockGetBalanceService()
+			const getCodeMock = createMockGetCodeService()
+			const getStorageAtMock = createMockGetStorageAtService()
+			const blockchainMock = createMockBlockchainService()
+
+			const mockBlock = {
+				header: {
+					number: 100n,
+					parentHash: new Uint8Array(32),
+					nonce: new Uint8Array(8),
+					uncleHash: new Uint8Array(32),
+					logsBloom: new Uint8Array(256),
+					transactionsTrie: new Uint8Array(32),
+					stateRoot: new Uint8Array(32),
+					receiptTrie: new Uint8Array(32),
+					coinbase: { bytes: new Uint8Array(20) },
+					difficulty: 0n,
+					extraData: new Uint8Array(),
+					gasLimit: 30000000n,
+					gasUsed: 21000n,
+					timestamp: 1700000000n,
+				},
+				transactions: [],
+				uncleHeaders: [],
+				hash: () => new Uint8Array(32),
+				serialize: () => new Uint8Array(1000),
+			}
+
+			blockchainMock.getBlockByHash.mockReturnValueOnce(Effect.succeed(mockBlock as any))
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(GetBalanceService, getBalanceMock as any),
+				Layer.succeed(GetCodeService, getCodeMock as any),
+				Layer.succeed(GetStorageAtService, getStorageAtMock as any)
+			)
+
+			const layer = Layer.provide(EthActionsLive, mockLayer)
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getBlockByHash({
+					blockHash: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
+					includeTransactions: false,
+				})
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).not.toBeNull()
+			expect(result?.number).toBe('0x64')
+		})
+
+		it('should return null for non-existent block by hash', async () => {
+			const vmMock = createMockVm()
+			const commonMock = createMockCommon()
+			const stateManagerMock = createMockStateManager()
+			const getBalanceMock = createMockGetBalanceService()
+			const getCodeMock = createMockGetCodeService()
+			const getStorageAtMock = createMockGetStorageAtService()
+			const blockchainMock = createMockBlockchainService()
+
+			blockchainMock.getBlockByHash.mockReturnValueOnce(Effect.fail(new Error('Block not found')))
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(GetBalanceService, getBalanceMock as any),
+				Layer.succeed(GetCodeService, getCodeMock as any),
+				Layer.succeed(GetStorageAtService, getStorageAtMock as any)
+			)
+
+			const layer = Layer.provide(EthActionsLive, mockLayer)
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getBlockByHash({
+					blockHash: '0xdeadbeef0000000000000000000000000000000000000000000000000000dead' as `0x${string}`,
+					includeTransactions: false,
+				})
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).toBeNull()
+		})
+
+		it('should handle estimateGas revert error', async () => {
+			const vmMock = createMockVm()
+			vmMock.vm.evm.runCall.mockResolvedValueOnce({
+				execResult: {
+					returnValue: new Uint8Array([0x08, 0xc3, 0x79, 0xa0]),
+					executionGasUsed: 21000n,
+					exceptionError: {
+						error: 'revert',
+						message: 'Insufficient balance',
+					},
+				},
+			})
+
+			const commonMock = createMockCommon()
+			const stateManagerMock = createMockStateManager()
+			const getBalanceMock = createMockGetBalanceService()
+			const getCodeMock = createMockGetCodeService()
+			const getStorageAtMock = createMockGetStorageAtService()
+			const blockchainMock = createMockBlockchainService()
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(GetBalanceService, getBalanceMock as any),
+				Layer.succeed(GetCodeService, getCodeMock as any),
+				Layer.succeed(GetStorageAtService, getStorageAtMock as any)
+			)
+
+			const layer = Layer.provide(EthActionsLive, mockLayer)
+
+			const params = {
+				to: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+				data: '0x1234' as `0x${string}`,
+			}
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.estimateGas(params)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit) && exit.cause._tag === 'Fail') {
+				const error = exit.cause.error as RevertError
+				expect(error._tag).toBe('RevertError')
+			}
+		})
+
+		it('should handle estimateGas out of gas error', async () => {
+			const vmMock = createMockVm()
+			vmMock.vm.evm.runCall.mockResolvedValueOnce({
+				execResult: {
+					returnValue: new Uint8Array(),
+					executionGasUsed: 100000n,
+					exceptionError: {
+						error: 'out of gas',
+						message: 'Transaction ran out of gas',
+					},
+				},
+			})
+
+			const commonMock = createMockCommon()
+			const stateManagerMock = createMockStateManager()
+			const getBalanceMock = createMockGetBalanceService()
+			const getCodeMock = createMockGetCodeService()
+			const getStorageAtMock = createMockGetStorageAtService()
+			const blockchainMock = createMockBlockchainService()
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(GetBalanceService, getBalanceMock as any),
+				Layer.succeed(GetCodeService, getCodeMock as any),
+				Layer.succeed(GetStorageAtService, getStorageAtMock as any)
+			)
+
+			const layer = Layer.provide(EthActionsLive, mockLayer)
+
+			const params = {
+				to: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+				data: '0x1234' as `0x${string}`,
+			}
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.estimateGas(params)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit) && exit.cause._tag === 'Fail') {
+				const error = exit.cause.error as OutOfGasError
+				expect(error._tag).toBe('OutOfGasError')
+			}
+		})
+
+		it('should handle estimateGas internal error', async () => {
+			const vmMock = createMockVm()
+			vmMock.vm.evm.runCall.mockResolvedValueOnce({
+				execResult: {
+					returnValue: new Uint8Array(),
+					executionGasUsed: 50000n,
+					exceptionError: {
+						error: 'stack underflow',
+						message: 'Stack underflow',
+					},
+				},
+			})
+
+			const commonMock = createMockCommon()
+			const stateManagerMock = createMockStateManager()
+			const getBalanceMock = createMockGetBalanceService()
+			const getCodeMock = createMockGetCodeService()
+			const getStorageAtMock = createMockGetStorageAtService()
+			const blockchainMock = createMockBlockchainService()
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(GetBalanceService, getBalanceMock as any),
+				Layer.succeed(GetCodeService, getCodeMock as any),
+				Layer.succeed(GetStorageAtService, getStorageAtMock as any)
+			)
+
+			const layer = Layer.provide(EthActionsLive, mockLayer)
+
+			const params = {
+				to: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+				data: '0x1234' as `0x${string}`,
+			}
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.estimateGas(params)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit) && exit.cause._tag === 'Fail') {
+				const error = exit.cause.error as InternalError
+				expect(error._tag).toBe('InternalError')
+			}
+		})
+
+		it('should handle invalid address in estimateGas', async () => {
+			const { layer } = createTestLayer()
+
+			const params = {
+				to: 'invalid-address' as `0x${string}`,
+				data: '0x1234' as `0x${string}`,
+			}
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.estimateGas(params)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+		})
+
+		it('should handle invalid from address in estimateGas', async () => {
+			const { layer } = createTestLayer()
+
+			const params = {
+				to: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+				data: '0x1234' as `0x${string}`,
+				from: 'not-a-valid-address' as `0x${string}`,
+			}
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.estimateGas(params)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+		})
+
+		it('should handle invalid data hex in estimateGas', async () => {
+			const { layer } = createTestLayer()
+
+			const params = {
+				to: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+				data: '0xZZZZ' as `0x${string}`,
+			}
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.estimateGas(params)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+		})
+
+		it('should handle EVM runCall failure in estimateGas', async () => {
+			const vmMock = createMockVm()
+			vmMock.vm.evm.runCall.mockRejectedValueOnce(new Error('EVM execution failed'))
+
+			const commonMock = createMockCommon()
+			const stateManagerMock = createMockStateManager()
+			const getBalanceMock = createMockGetBalanceService()
+			const getCodeMock = createMockGetCodeService()
+			const getStorageAtMock = createMockGetStorageAtService()
+			const blockchainMock = createMockBlockchainService()
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(GetBalanceService, getBalanceMock as any),
+				Layer.succeed(GetCodeService, getCodeMock as any),
+				Layer.succeed(GetStorageAtService, getStorageAtMock as any)
+			)
+
+			const layer = Layer.provide(EthActionsLive, mockLayer)
+
+			const params = {
+				to: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+				data: '0x1234' as `0x${string}`,
+			}
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.estimateGas(params)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+		})
+	})
+
 	describe('address validation (Issue #163)', () => {
 		it('should return InvalidParamsError for invalid to address', async () => {
 			const { layer } = createTestLayer()
