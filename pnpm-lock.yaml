@@ -1922,6 +1922,9 @@ importers:
       '@tevm/errors-effect':
         specifier: workspace:^
         version: link:../errors-effect
+      '@tevm/evm-effect':
+        specifier: workspace:^
+        version: link:../evm-effect
       '@tevm/interop':
         specifier: workspace:^
         version: link:../interop
@@ -2597,6 +2600,9 @@ importers:
       '@tevm/transport-effect':
         specifier: workspace:^
         version: link:../transport-effect
+      '@tevm/utils':
+        specifier: workspace:^
+        version: link:../utils
       effect:
         specifier: 3.18.1
         version: 3.18.1
@@ -2610,9 +2616,6 @@ importers:
       '@tevm/tsupconfig':
         specifier: workspace:^
         version: link:../../configs/tsupconfig
-      '@tevm/utils':
-        specifier: workspace:^
-        version: link:../utils
       '@types/node':
         specifier: ^24.6.1
         version: 24.6.1

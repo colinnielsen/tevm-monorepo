@@ -4,6 +4,9 @@ import { TevmActionsService } from './TevmActionsService.js'
 import { TevmActionsLive } from './TevmActionsLive.js'
 import { StateManagerService } from '@tevm/state-effect'
 import { VmService } from '@tevm/vm-effect'
+import { EvmService } from '@tevm/evm-effect'
+import { BlockchainService } from '@tevm/blockchain-effect'
+import { CommonService } from '@tevm/common-effect'
 import { GetAccountService, SetAccountService } from '@tevm/actions-effect'
 
 describe('TevmActionsLive', () => {
@@ -14,7 +17,7 @@ describe('TevmActionsLive', () => {
 		}
 
 		return {
-			// The underlying VM instance with blockchain and evm access
+			// The underlying VM instance with blockchain and evm access (legacy, kept for compatibility)
 			vm: {
 				blockchain: {
 					getCanonicalHeadBlock: vi.fn(() => Promise.resolve({ header: { number: 100n } })),
@@ -41,7 +44,8 @@ describe('TevmActionsLive', () => {
 				})
 			),
 			runBlock: vi.fn(() => Effect.succeed({})),
-			buildBlock: vi.fn(() => Effect.succeed({})),
+			// VmService.buildBlock returns Effect with block builder (used by mine())
+			buildBlock: vi.fn(() => Effect.succeed(mockBlockBuilder)),
 			ready: Effect.succeed(true),
 			deepCopy: vi.fn(() => Effect.succeed({} as any)),
 		}
@@ -99,15 +103,69 @@ describe('TevmActionsLive', () => {
 		),
 	})
 
+	const createMockEvm = () => ({
+		evm: {} as any,
+		runCall: vi.fn(() =>
+			Effect.succeed({
+				execResult: {
+					returnValue: new Uint8Array([0x12, 0x34]),
+					executionGasUsed: 21000n,
+					gas: 79000n,
+				},
+			})
+		),
+		runCode: vi.fn(() => Effect.succeed({ returnValue: new Uint8Array() })),
+		getActivePrecompiles: vi.fn(() => Effect.succeed([])),
+		addCustomPrecompile: vi.fn(() => Effect.succeed(undefined)),
+		removeCustomPrecompile: vi.fn(() => Effect.succeed(undefined)),
+	})
+
+	const createMockBlockchain = () => {
+		// Create a mock block builder that returns a mock block
+		const mockBlockBuilder = {
+			build: vi.fn(() => Promise.resolve({ header: { number: 101n } })),
+		}
+
+		return {
+			chain: {} as any,
+			getBlock: vi.fn(() => Effect.succeed({ header: { number: 100n } } as any)),
+			getBlockByHash: vi.fn(() => Effect.succeed({ header: { number: 100n } } as any)),
+			putBlock: vi.fn(() => Effect.succeed(undefined)),
+			getCanonicalHeadBlock: vi.fn(() => Effect.succeed({ header: { number: 100n, timestamp: 1000n } } as any)),
+			getIteratorHead: vi.fn(() => Effect.succeed({ header: { number: 100n } } as any)),
+			setIteratorHead: vi.fn(() => Effect.succeed(undefined)),
+			delBlock: vi.fn(() => Effect.succeed(undefined)),
+			validateHeader: vi.fn(() => Effect.succeed(undefined)),
+			ready: Effect.succeed(undefined),
+			iterator: vi.fn(() => (async function* () {})()),
+			shallowCopy: vi.fn(() => ({} as any)),
+			deepCopy: vi.fn(() => Effect.succeed({} as any)),
+		}
+	}
+
+	const createMockCommon = () => ({
+		chainId: 1,
+		hardfork: 'prague' as const,
+		eips: [],
+		common: {} as any,
+		copy: vi.fn(() => ({} as any)),
+	})
+
 	const createTestLayer = () => {
 		const vmMock = createMockVm()
 		const stateManagerMock = createMockStateManager()
 		const getAccountMock = createMockGetAccountService()
 		const setAccountMock = createMockSetAccountService()
+		const evmMock = createMockEvm()
+		const blockchainMock = createMockBlockchain()
+		const commonMock = createMockCommon()
 
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
+			Layer.succeed(EvmService, evmMock as any),
+			Layer.succeed(BlockchainService, blockchainMock as any),
+			Layer.succeed(CommonService, commonMock as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -117,6 +175,9 @@ describe('TevmActionsLive', () => {
 			mocks: {
 				vm: vmMock,
 				stateManager: stateManagerMock,
+				evm: evmMock,
+				blockchain: blockchainMock,
+				common: commonMock,
 				getAccount: getAccountMock,
 				setAccount: setAccountMock,
 			},
@@ -139,7 +200,8 @@ describe('TevmActionsLive', () => {
 		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
 		expect(result.rawData).toBe('0x1234')
 		expect(result.executionGasUsed).toBe(21000n)
-		expect(mocks.vm.vm.evm.runCall).toHaveBeenCalled()
+		// Now using EvmService abstraction
+		expect(mocks.evm.runCall).toHaveBeenCalled()
 	})
 
 	it('should delegate getAccount to GetAccountService', async () => {
@@ -234,7 +296,7 @@ describe('TevmActionsLive', () => {
 		expect(account.balance).toBe(2000000000000000000n)
 	})
 
-	it('should mine blocks using vm.vm.buildBlock', async () => {
+	it('should mine blocks using service abstractions', async () => {
 		const { layer, mocks } = createTestLayer()
 
 		const program = Effect.gen(function* () {
@@ -244,10 +306,10 @@ describe('TevmActionsLive', () => {
 
 		await Effect.runPromise(program.pipe(Effect.provide(layer)))
 
-		// Verify vm.vm.buildBlock was called 3 times (once per block)
-		expect(mocks.vm.vm.buildBlock).toHaveBeenCalledTimes(3)
-		// Verify blocks were put into blockchain
-		expect(mocks.vm.vm.blockchain.putBlock).toHaveBeenCalledTimes(3)
+		// Verify VmService.buildBlock was called 3 times (once per block)
+		expect(mocks.vm.buildBlock).toHaveBeenCalledTimes(3)
+		// Verify BlockchainService.putBlock was called 3 times
+		expect(mocks.blockchain.putBlock).toHaveBeenCalledTimes(3)
 	})
 
 	it('should mine default 1 block when no options provided', async () => {
@@ -260,8 +322,8 @@ describe('TevmActionsLive', () => {
 
 		await Effect.runPromise(program.pipe(Effect.provide(layer)))
 
-		expect(mocks.vm.vm.buildBlock).toHaveBeenCalledTimes(1)
-		expect(mocks.vm.vm.blockchain.putBlock).toHaveBeenCalledTimes(1)
+		expect(mocks.vm.buildBlock).toHaveBeenCalledTimes(1)
+		expect(mocks.blockchain.putBlock).toHaveBeenCalledTimes(1)
 	})
 
 	it('should execute call with from parameter', async () => {
@@ -283,7 +345,8 @@ describe('TevmActionsLive', () => {
 
 		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
 		expect(result.rawData).toBe('0x1234')
-		expect(mocks.vm.vm.evm.runCall).toHaveBeenCalled()
+		// Now using EvmService abstraction
+		expect(mocks.evm.runCall).toHaveBeenCalled()
 	})
 
 	it('should execute call without to parameter (contract creation)', async () => {
@@ -305,13 +368,13 @@ describe('TevmActionsLive', () => {
 	it('should handle call with empty data', async () => {
 		const { layer, mocks } = createTestLayer()
 
-		// Update mock to return empty result
-		mocks.vm.vm.evm.runCall.mockResolvedValueOnce({
+		// Update mock to return empty result (now using EvmService abstraction)
+		mocks.evm.runCall.mockReturnValueOnce(Effect.succeed({
 			execResult: {
 				returnValue: new Uint8Array(),
 				executionGasUsed: 21000n,
 			},
-		})
+		}))
 
 		const params = {
 			to: '0x1234567890123456789012345678901234567890' as const,
@@ -345,15 +408,23 @@ describe('TevmActionsLive', () => {
 
 	it('should handle call error from EVM', async () => {
 		const vmMock = createMockVm()
-		vmMock.vm.evm.runCall.mockRejectedValueOnce(new Error('EVM execution failed'))
 
 		const stateManagerMock = createMockStateManager()
 		const getAccountMock = createMockGetAccountService()
 		const setAccountMock = createMockSetAccountService()
 
+		// Mock EVM to return a failure (now using EvmService abstraction)
+		const evmMock = createMockEvm()
+		evmMock.runCall.mockReturnValueOnce(Effect.fail(new Error('EVM execution failed')))
+		const blockchainMock = createMockBlockchain()
+		const commonMock = createMockCommon()
+
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
+			Layer.succeed(EvmService, evmMock as any),
+			Layer.succeed(BlockchainService, blockchainMock as any),
+			Layer.succeed(CommonService, commonMock as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -381,9 +452,16 @@ describe('TevmActionsLive', () => {
 		const getAccountMock = createMockGetAccountService()
 		const setAccountMock = createMockSetAccountService()
 
+		const evmMock = createMockEvm()
+		const blockchainMock = createMockBlockchain()
+		const commonMock = createMockCommon()
+
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
+			Layer.succeed(EvmService, evmMock as any),
+			Layer.succeed(BlockchainService, blockchainMock as any),
+			Layer.succeed(CommonService, commonMock as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -421,9 +499,16 @@ describe('TevmActionsLive', () => {
 		const getAccountMock = createMockGetAccountService()
 		const setAccountMock = createMockSetAccountService()
 
+		const evmMock = createMockEvm()
+		const blockchainMock = createMockBlockchain()
+		const commonMock = createMockCommon()
+
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
+			Layer.succeed(EvmService, evmMock as any),
+			Layer.succeed(BlockchainService, blockchainMock as any),
+			Layer.succeed(CommonService, commonMock as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -570,9 +655,16 @@ describe('TevmActionsLive', () => {
 		const getAccountMock = createMockGetAccountService()
 		const setAccountMock = createMockSetAccountService()
 
+		const evmMock = createMockEvm()
+		const blockchainMock = createMockBlockchain()
+		const commonMock = createMockCommon()
+
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
+			Layer.succeed(EvmService, evmMock as any),
+			Layer.succeed(BlockchainService, blockchainMock as any),
+			Layer.succeed(CommonService, commonMock as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -592,15 +684,23 @@ describe('TevmActionsLive', () => {
 
 	it('should handle mine error from getCanonicalHeadBlock', async () => {
 		const vmMock = createMockVm()
-		vmMock.vm.blockchain.getCanonicalHeadBlock.mockRejectedValueOnce(new Error('Block not found'))
 
 		const stateManagerMock = createMockStateManager()
 		const getAccountMock = createMockGetAccountService()
 		const setAccountMock = createMockSetAccountService()
 
+		const evmMock = createMockEvm()
+		// Mock BlockchainService to fail on getCanonicalHeadBlock
+		const blockchainMock = createMockBlockchain()
+		blockchainMock.getCanonicalHeadBlock.mockReturnValueOnce(Effect.fail(new Error('Block not found')))
+		const commonMock = createMockCommon()
+
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
+			Layer.succeed(EvmService, evmMock as any),
+			Layer.succeed(BlockchainService, blockchainMock as any),
+			Layer.succeed(CommonService, commonMock as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -617,16 +717,24 @@ describe('TevmActionsLive', () => {
 	})
 
 	it('should handle mine error from buildBlock', async () => {
+		// Mock VmService to fail on buildBlock
 		const vmMock = createMockVm()
-		vmMock.vm.buildBlock.mockRejectedValueOnce(new Error('Build failed'))
+		vmMock.buildBlock.mockReturnValueOnce(Effect.fail(new Error('Build failed')))
 
 		const stateManagerMock = createMockStateManager()
 		const getAccountMock = createMockGetAccountService()
 		const setAccountMock = createMockSetAccountService()
 
+		const evmMock = createMockEvm()
+		const blockchainMock = createMockBlockchain()
+		const commonMock = createMockCommon()
+
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
+			Layer.succeed(EvmService, evmMock as any),
+			Layer.succeed(BlockchainService, blockchainMock as any),
+			Layer.succeed(CommonService, commonMock as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -644,18 +752,27 @@ describe('TevmActionsLive', () => {
 
 	it('should handle mine error from block.build()', async () => {
 		const vmMock = createMockVm()
+		// Create a block builder that fails on build()
 		const mockBlockBuilder = {
 			build: vi.fn(() => Promise.reject(new Error('Finalize failed'))),
 		}
-		vmMock.vm.buildBlock.mockResolvedValueOnce(mockBlockBuilder)
+		// Mock VmService.buildBlock to return the failing block builder
+		vmMock.buildBlock.mockReturnValueOnce(Effect.succeed(mockBlockBuilder))
 
 		const stateManagerMock = createMockStateManager()
 		const getAccountMock = createMockGetAccountService()
 		const setAccountMock = createMockSetAccountService()
 
+		const evmMock = createMockEvm()
+		const blockchainMock = createMockBlockchain()
+		const commonMock = createMockCommon()
+
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
+			Layer.succeed(EvmService, evmMock as any),
+			Layer.succeed(BlockchainService, blockchainMock as any),
+			Layer.succeed(CommonService, commonMock as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -673,15 +790,23 @@ describe('TevmActionsLive', () => {
 
 	it('should handle mine error from putBlock', async () => {
 		const vmMock = createMockVm()
-		vmMock.vm.blockchain.putBlock.mockRejectedValueOnce(new Error('Put failed'))
 
 		const stateManagerMock = createMockStateManager()
 		const getAccountMock = createMockGetAccountService()
 		const setAccountMock = createMockSetAccountService()
 
+		const evmMock = createMockEvm()
+		// Mock BlockchainService to fail on putBlock
+		const blockchainMock = createMockBlockchain()
+		blockchainMock.putBlock.mockReturnValueOnce(Effect.fail(new Error('Put failed')))
+		const commonMock = createMockCommon()
+
 		const mockLayer = Layer.mergeAll(
 			Layer.succeed(StateManagerService, stateManagerMock as any),
 			Layer.succeed(VmService, vmMock as any),
+			Layer.succeed(EvmService, evmMock as any),
+			Layer.succeed(BlockchainService, blockchainMock as any),
+			Layer.succeed(CommonService, commonMock as any),
 			Layer.succeed(GetAccountService, getAccountMock as any),
 			Layer.succeed(SetAccountService, setAccountMock as any)
 		)
@@ -754,6 +879,7 @@ describe('TevmActionsLive', () => {
 				build: vi.fn(() => Promise.resolve({ header: { number: 101n, timestamp: futureTimestamp + 1n } })),
 			}
 
+			// VmService.buildBlock captures the timestamp from the call
 			const vmMock = {
 				vm: {
 					blockchain: {
@@ -765,26 +891,49 @@ describe('TevmActionsLive', () => {
 					evm: {
 						runCall: vi.fn(() => Promise.resolve({ execResult: { returnValue: new Uint8Array() } })),
 					},
-					buildBlock: vi.fn((opts: any) => {
-						capturedTimestamp = opts.headerData?.timestamp
-						return Promise.resolve(mockBlockBuilder)
-					}),
+					buildBlock: vi.fn(() => Promise.resolve(mockBlockBuilder)),
 					common: {},
 				},
 				runTx: vi.fn(() => Effect.succeed({})),
 				runBlock: vi.fn(() => Effect.succeed({})),
-				buildBlock: vi.fn(() => Effect.succeed({})),
+				// VmService.buildBlock is now an Effect that captures timestamp
+				buildBlock: vi.fn((opts: any) => {
+					capturedTimestamp = opts.headerData?.timestamp
+					return Effect.succeed(mockBlockBuilder)
+				}),
 				ready: Effect.succeed(true),
+				deepCopy: vi.fn(() => Effect.succeed({} as any)),
+			}
+
+			// BlockchainService mock with future timestamp parent
+			const blockchainMock = {
+				chain: {} as any,
+				getBlock: vi.fn(() => Effect.succeed({ header: { number: 100n, timestamp: futureTimestamp } } as any)),
+				getBlockByHash: vi.fn(() => Effect.succeed({ header: { number: 100n, timestamp: futureTimestamp } } as any)),
+				putBlock: vi.fn(() => Effect.succeed(undefined)),
+				getCanonicalHeadBlock: vi.fn(() => Effect.succeed({ header: { number: 100n, timestamp: futureTimestamp } } as any)),
+				getIteratorHead: vi.fn(() => Effect.succeed({ header: { number: 100n } } as any)),
+				setIteratorHead: vi.fn(() => Effect.succeed(undefined)),
+				delBlock: vi.fn(() => Effect.succeed(undefined)),
+				validateHeader: vi.fn(() => Effect.succeed(undefined)),
+				ready: Effect.succeed(undefined),
+				iterator: vi.fn(() => (async function* () {})()),
+				shallowCopy: vi.fn(() => ({} as any)),
 				deepCopy: vi.fn(() => Effect.succeed({} as any)),
 			}
 
 			const stateManagerMock = createMockStateManager()
 			const getAccountMock = createMockGetAccountService()
 			const setAccountMock = createMockSetAccountService()
+			const evmMock = createMockEvm()
+			const commonMock = createMockCommon()
 
 			const mockLayer = Layer.mergeAll(
 				Layer.succeed(StateManagerService, stateManagerMock as any),
 				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(CommonService, commonMock as any),
 				Layer.succeed(GetAccountService, getAccountMock as any),
 				Layer.succeed(SetAccountService, setAccountMock as any)
 			)

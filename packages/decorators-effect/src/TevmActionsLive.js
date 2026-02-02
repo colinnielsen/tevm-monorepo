@@ -7,6 +7,9 @@ import { Effect, Layer } from 'effect'
 import { TevmActionsService } from './TevmActionsService.js'
 import { StateManagerService } from '@tevm/state-effect'
 import { VmService } from '@tevm/vm-effect'
+import { EvmService } from '@tevm/evm-effect'
+import { BlockchainService } from '@tevm/blockchain-effect'
+import { CommonService } from '@tevm/common-effect'
 import {
 	GetAccountService,
 	SetAccountService,
@@ -46,11 +49,14 @@ import { InternalError, InvalidParamsError } from '@tevm/errors-effect'
  * ```
  *
  */
-export const TevmActionsLive = /** @type {Layer.Layer<import('./TevmActionsService.js').TevmActionsServiceId, never, import('@tevm/state-effect').StateManagerService | import('@tevm/vm-effect').VmService | import('@tevm/actions-effect').GetAccountService | import('@tevm/actions-effect').SetAccountService>} */ (Layer.effect(
+export const TevmActionsLive = /** @type {Layer.Layer<import('./TevmActionsService.js').TevmActionsServiceId, never, import('@tevm/state-effect').StateManagerService | import('@tevm/vm-effect').VmService | import('@tevm/evm-effect').EvmService | import('@tevm/blockchain-effect').BlockchainService | import('@tevm/common-effect').CommonService | import('@tevm/actions-effect').GetAccountService | import('@tevm/actions-effect').SetAccountService>} */ (Layer.effect(
 	TevmActionsService,
 	Effect.gen(function* () {
 		const stateManager = yield* StateManagerService
 		const vm = yield* VmService
+		const evm = yield* EvmService
+		const blockchain = yield* BlockchainService
+		const common = yield* CommonService
 		const getAccountService = yield* GetAccountService
 		const setAccountService = yield* SetAccountService
 
@@ -151,14 +157,15 @@ export const TevmActionsLive = /** @type {Layer.Layer<import('./TevmActionsServi
 						callOpts['origin'] = fromAddress
 					}
 
-					const result = yield* Effect.tryPromise({
-						try: () => vm.vm.evm.runCall(/** @type {any} */ (callOpts)),
-						catch: (e) =>
+					// Use EvmService abstraction instead of direct VM access (fixes #R125-P4-003)
+					const result = yield* evm.runCall(/** @type {any} */ (callOpts)).pipe(
+						Effect.mapError((e) =>
 							new InternalError({
 								message: `tevm_call failed: ${e instanceof Error ? e.message : String(e)}`,
 								cause: e instanceof Error ? e : undefined,
-							}),
-					})
+							})
+						)
+					)
 
 					const execResult = result.execResult ?? {}
 					return {
@@ -317,15 +324,15 @@ export const TevmActionsLive = /** @type {Layer.Layer<import('./TevmActionsServi
 					const currentTime = BigInt(Math.floor(Date.now() / 1000))
 
 					for (let i = 0; i < blocks; i++) {
-						// Get current block for timestamp calculation
-						const currentBlock = yield* Effect.tryPromise({
-							try: () => vm.vm.blockchain.getCanonicalHeadBlock(),
-							catch: (e) =>
+						// Use BlockchainService abstraction instead of direct VM access (fixes #R125-P4-003)
+						const currentBlock = yield* blockchain.getCanonicalHeadBlock().pipe(
+							Effect.mapError((e) =>
 								new InternalError({
 									message: `Failed to get current block: ${e instanceof Error ? e.message : String(e)}`,
 									cause: e instanceof Error ? e : undefined,
-								}),
-						})
+								})
+							)
+						)
 
 						// Ensure timestamp is greater than parent block's timestamp to satisfy Ethereum consensus rules
 						// This handles forked chains or test setups where parent may have a future timestamp (Issue #58 fix)
@@ -334,26 +341,25 @@ export const TevmActionsLive = /** @type {Layer.Layer<import('./TevmActionsServi
 						const timestamp = baseTimestamp + BigInt(i)
 						const blockNumber = currentBlock.header.number + 1n
 
-						// Build a new block using the VM's buildBlock method
-						const blockBuilder = yield* Effect.tryPromise({
-							try: () =>
-								vm.vm.buildBlock({
-									parentBlock: currentBlock,
-									headerData: {
-										timestamp,
-										number: blockNumber,
-									},
-									blockOpts: {
-										putBlockIntoBlockchain: false,
-										common: vm.vm.common,
-									},
-								}),
-							catch: (e) =>
+						// Use VmService abstraction instead of direct VM access (fixes #R125-P4-003)
+						const blockBuilder = yield* vm.buildBlock({
+							parentBlock: currentBlock,
+							headerData: {
+								timestamp,
+								number: blockNumber,
+							},
+							blockOpts: {
+								putBlockIntoBlockchain: false,
+								common: common.common,
+							},
+						}).pipe(
+							Effect.mapError((e) =>
 								new InternalError({
 									message: `Failed to build block: ${e instanceof Error ? e.message : String(e)}`,
 									cause: e instanceof Error ? e : undefined,
-								}),
-						})
+								})
+							)
+						)
 
 						// Build and finalize the block
 						const block = yield* Effect.tryPromise({
@@ -365,15 +371,15 @@ export const TevmActionsLive = /** @type {Layer.Layer<import('./TevmActionsServi
 								}),
 						})
 
-						// Put the block into the blockchain
-						yield* Effect.tryPromise({
-							try: () => vm.vm.blockchain.putBlock(block),
-							catch: (e) =>
+						// Use BlockchainService abstraction instead of direct VM access (fixes #R125-P4-003)
+						yield* blockchain.putBlock(block).pipe(
+							Effect.mapError((e) =>
 								new InternalError({
 									message: `Failed to put block into blockchain: ${e instanceof Error ? e.message : String(e)}`,
 									cause: e instanceof Error ? e : undefined,
-								}),
-						})
+								})
+							)
+						)
 					}
 				}),
 		})

@@ -16,7 +16,7 @@
 
 **NEW HIGH Issues Found (3 total):**
 - ✅ **#R125-P4-002**: MemoryClientLive.getBlockNumber bypasses service abstraction - **FIXED 2026-02-02**
-- 🔴 **#R125-P4-003**: TevmActionsLive directly accesses `vm.vm.evm.runCall()` and `vm.vm.buildBlock()` bypassing service methods
+- ✅ **#R125-P4-003**: TevmActionsLive directly accesses `vm.vm.evm.runCall()` and `vm.vm.buildBlock()` bypassing service methods - **FIXED 2026-02-02**
 - ✅ **#R125-P4-004**: RequestLive missing ~10 standard JSON-RPC methods - **FIXED 2026-02-02**
 
 **NEW MEDIUM Issues Found (9 total):**
@@ -63,7 +63,7 @@
 
 **Open Issues Summary (Post 125th Review):**
 - **CRITICAL**: 0 ✅ (#R125-P4-001 - DeepCopy state inconsistency - FIXED 2026-02-02)
-- **HIGH**: 1 🔴 (#R125-P4-003) + 2 ✅ FIXED (#R125-P4-002, #R125-P4-004)
+- **HIGH**: 0 ✅ (All 3 FIXED: #R125-P4-002, #R125-P4-003, #R125-P4-004)
 - **MEDIUM**: 128 🟡 (Previous 119 + 9 NEW from 125th review)
 - **LOW**: 313 (Previous 300 + 13 NEW from 125th review)
 
@@ -380,14 +380,26 @@ This ensures both VM and action services use the SAME stateManager instance. Als
 
 ---
 
-##### Issue #R125-P4-003: TevmActionsLive Direct VM Internal Access
+##### Issue #R125-P4-003: TevmActionsLive Direct VM Internal Access ✅ FIXED
 **File:Lines**: `packages/decorators-effect/src/TevmActionsLive.js:154-161,338-376`
 **Severity**: 🔴 HIGH
-**Status**: 🟡 NEW
+**Status**: ✅ FIXED (2026-02-02)
 
 **Problem**: Multiple locations directly access `vm.vm.evm.runCall()` and `vm.vm.buildBlock()` instead of using service methods.
 
 **Impact**: Same as #R125-P4-002 - violates service abstraction.
+
+**Fix Applied**:
+1. Added imports for EvmService, BlockchainService, and CommonService to TevmActionsLive.js
+2. Updated Layer type annotation to include new service dependencies
+3. Added yield statements to acquire services from Effect context
+4. Replaced `vm.vm.evm.runCall()` with `evm.runCall()` via EvmService abstraction (line 161)
+5. Replaced `vm.vm.blockchain.getCanonicalHeadBlock()` with `blockchain.getCanonicalHeadBlock()` via BlockchainService (line 328)
+6. Replaced `vm.vm.buildBlock()` with `vm.buildBlock()` via VmService abstraction (line 345)
+7. Replaced `vm.vm.blockchain.putBlock()` with `blockchain.putBlock()` via BlockchainService (line 375)
+8. Added @tevm/evm-effect dependency to package.json
+9. Updated TevmActionsLive.spec.ts with new mocks for EvmService, BlockchainService, CommonService
+10. Test results: 149 tests pass, 98.62% statement coverage
 
 ---
 
@@ -475,8 +487,8 @@ This ensures both VM and action services use the SAME stateManager instance. Als
 #### Priority Fixes Required (125th Review)
 
 1. ✅ **CRITICAL #R125-P4-001**: DeepCopy state inconsistency - VM and StateManager have separate copies - **FIXED 2026-02-02**
-2. **HIGH #R125-P4-002**: getBlockNumber bypasses service abstraction
-3. **HIGH #R125-P4-003**: TevmActionsLive direct internal access
+2. ✅ **HIGH #R125-P4-002**: getBlockNumber bypasses service abstraction - **FIXED 2026-02-02**
+3. ✅ **HIGH #R125-P4-003**: TevmActionsLive direct internal access - **FIXED 2026-02-02**
 4. ✅ **HIGH #R125-P4-004**: Missing JSON-RPC methods - **FIXED 2026-02-02**
 5. ✅ **HIGH #R125-P1-002**: effectToPromise unsafe default runtime cast - **FIXED 2026-02-02**
 6. **MEDIUM #R125-P3-001**: FilterLive deepCopy primitive handling
