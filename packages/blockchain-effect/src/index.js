@@ -68,3 +68,4 @@
 export { BlockchainService } from './BlockchainService.js'
 export { BlockchainLive } from './BlockchainLive.js'
 export { BlockchainLocal } from './BlockchainLocal.js'
+export { createBlockchainShape } from './createBlockchainShape.js'

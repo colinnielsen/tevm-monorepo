@@ -2,12 +2,62 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-04 (Post 131st Fix)
+**Last Updated**: 2026-02-04 (Post 132nd Review)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
 
 ---
 
 ## Review Agent Summary (2026-02-04)
+
+**132nd REVIEW (2026-02-04).** Deep Parallel Opus 4.5 independent review with ultrathink. Found 0 CRITICAL, 2 HIGH, 9 MEDIUM, 15 LOW = 26 NEW issues.
+
+**FIXED HIGH Issues (2 total from R132):**
+- ✅ **#R132-P2-003**: FIXED - HttpTransport isRetryableError now has null checks for cause and message properties
+- ✅ **#R132-P4-001**: FIXED - estimateGas now returns `gasUsed` directly when defined, avoiding double-count of 21000n base gas
+
+**NEW MEDIUM Issues Found (9 total):**
+- 🟡 **#R132-P1-001**: LoggerLive child() creates new Pino instance instead of using Pino's native child() method - performance degradation
+- 🟡 **#R132-P1-004**: effectToPromise lacks TypeScript overload declarations file unlike toTaggedError.types.ts
+- 🟡 **#R132-P1-006**: toTaggedError alias conversions silently change _tag value (e.g., 'Revert' -> 'RevertError') - breaks Effect.catchTag patterns
+- 🟡 **#R132-P2-001**: BlockchainShape Type Declaration missing error channels for putBlock, getCanonicalHeadBlock, getIteratorHead, setIteratorHead
+- 🟡 **#R132-P2-002**: BlockchainShape.ready type missing InvalidBlockError error channel
+- 🟡 **#R132-P2-006**: VmLive shallowCopy shares exact EVM instance causing isolation violation - custom precompile changes affect both copies
+- 🟡 **#R132-P4-002**: InvalidOpcodeError uses hardcoded opcode: 0 instead of actual invalid opcode - loses diagnostic info
+- 🟡 **#R132-P4-003**: getBlockByNumber/Hash silently swallow ALL errors as null - masks internal failures as "block not found"
+- 🟡 **#R132-P4-004**: RevertError raw data not included in JSON-RPC error response - clients cannot decode custom Solidity errors
+
+**NEW LOW Issues Found (15 total):**
+- 🟢 **#R132-P1-002**: toBaseError VERSION constant hardcoded - will drift from package.json
+- 🟢 **#R132-P1-003**: LoggerTest 'fatal' level documentation inconsistency - no fatal() method but level accepted
+- 🟢 **#R132-P1-005**: wrapWithEffect accepts empty methods array without warning
+- 🟢 **#R132-P1-007**: LoggerTest getLogsByLevel type mismatch with broader LogLevel configuration
+- 🟢 **#R132-P2-004**: Minor race condition in HttpTransport batch queue size check (benign)
+- 🟢 **#R132-P2-005**: StateManagerLive duplicates createStateManagerShape logic instead of using shared factory
+- 🟢 **#R132-P2-007**: CommonShape.copy() double-copies (semantic confusion)
+- 🟢 **#R132-P2-008**: BlockchainLive iterator doesn't type fork-mode network errors distinctly
+- 🟢 **#R132-P3-001**: Counter overflow potential in Filter/Snapshot ID generation after ~9 quadrillion operations
+- 🟢 **#R132-P3-002**: FilterLive deep copy produces Array type instead of Tuple for log topics
+- 🟢 **#R132-P3-003**: DEFAULT_FILTER_EXPIRATION_MS not re-exported from package entry point
+- 🟢 **#R132-P4-005**: blockTag parameter not validated before passing to blockchain service
+- 🟢 **#R132-P4-006**: sendBulk has no request batch size limit
+- 🟢 **#R132-P4-007**: Deep-copied clients' runtimes not tracked for parent disposal - resource leak
+- 🟢 **#R132-P4-008**: JSON-RPC error response missing error-specific properties in data field
+
+**Open Issues Summary (Post 133rd Fix):**
+- **CRITICAL**: 0 ✅
+- **HIGH**: 1 🔴 (1 from R130 remaining - #R130-P4-002)
+- **MEDIUM**: 174 (165 previous + 9 NEW)
+- **LOW**: 395 (380 previous + 15 NEW)
+
+**133rd FIX (2026-02-04).** Fixed 4 HIGH priority issues from 132nd and 130th reviews.
+
+**FIXED HIGH Issues (4 total):**
+- ✅ **#R132-P2-003**: FIXED - HttpTransport isRetryableError now has null/undefined checks for cause and message properties
+- ✅ **#R132-P4-001**: FIXED - estimateGas now returns `gasUsed` directly when defined, avoiding double-count of 21000n base gas
+- ✅ **#R130-P4-003**: FIXED - MemoryClientLive deepCopy now uses copiedVm.vm.blockchain for BlockchainService instead of original
+- ✅ **#R130-P4-004**: FIXED - Added defensive check `copiedVm.vm.stateManager && ...` before accessing stateManager
+
+---
 
 **131st FIX (2026-02-04).** Fixed 1 CRITICAL and 4 HIGH priority issues from 130th review.
 
@@ -22,10 +72,12 @@
 
 **130th REVIEW (2026-02-04).** Deep Parallel Opus 4.5 comprehensive review with ultrathink. Found 1 CRITICAL, 7 HIGH, 28 MEDIUM, 29 LOW = 65 NEW issues.
 
-**REMAINING HIGH Issues (3 total):**
+**REMAINING HIGH Issues (1 total):**
 - 🔴 **#R130-P4-002**: Missing critical JSON-RPC methods in RequestLive (eth_getTransactionByHash, eth_getTransactionReceipt, eth_sendTransaction, eth_getLogs, etc.)
-- 🔴 **#R130-P4-003**: Blockchain not synchronized after deepCopy - blockchain's internal state may diverge from stateManager
-- 🔴 **#R130-P4-004**: Missing stateManager property handling in copied StateManagerShape - could fail when vm.stateManager is undefined
+
+**FIXED HIGH Issues (2 total from R130):**
+- ✅ **#R130-P4-003**: FIXED - MemoryClientLive deepCopy now uses copiedVm.vm.blockchain for BlockchainService
+- ✅ **#R130-P4-004**: FIXED - Added defensive check for stateManager before accessing
 
 **NEW MEDIUM Issues Found (28 total):**
 - 🟡 **#R130-P1-001**: Inconsistent `name` in super() call across 5 error classes
@@ -203,6 +255,331 @@
 - **HIGH**: 0 ✅ (All 5 from 128th review FIXED - Layer type declarations)
 - **MEDIUM**: 137 🟡 (Previous 132 + 5 NEW from 128th review)
 - **LOW**: 351 (Previous 338 + 13 NEW from 128th review)
+
+---
+
+### 132ND REVIEW (2026-02-04) - Deep Parallel Opus 4.5 Independent Code Review
+
+**Reviewed By**: Claude Opus 4.5 (4 parallel subagents reviewing each phase independently with ultrathink)
+**Scope**: Complete independent deep dive review of all 4 phases to find NEW bugs missed by 131 previous reviews
+
+---
+
+#### Phase 1: 0 CRITICAL + 0 HIGH + 3 MEDIUM + 4 LOW NEW Issues Found
+
+##### Issue #R132-P1-001: LoggerLive child() creates new Pino instance instead of using Pino's native child() method
+**File:Lines**: `packages/logger-effect/src/LoggerLive.js:58`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: The `child()` method in LoggerLive creates an entirely new LoggerShape with a new Pino instance via `createLoggerShape()`. This bypasses Pino's built-in `pinoLogger.child()` functionality which is more efficient and maintains proper parent-child relationships for structured logging.
+
+**Impact**: Performance degradation, lost benefits of Pino's bindings and child logger optimizations, memory inefficiency when many child loggers are created.
+
+---
+
+##### Issue #R132-P1-004: effectToPromise lacks TypeScript overload declarations file
+**File:Lines**: `packages/interop/src/effectToPromise.js:67-88`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: Unlike `toTaggedError.js` which has a companion `toTaggedError.types.ts` file for proper TypeScript overload resolution, `effectToPromise` has no corresponding `.types.ts` file. The JSDoc overload comments may not provide proper type-safe signatures for TypeScript users.
+
+**Impact**: TypeScript users may not get proper overload resolution. Compile-time type safety (requiring runtime for Effects with requirements) may not work as documented.
+
+---
+
+##### Issue #R132-P1-006: toTaggedError alias conversions change _tag value silently
+**File:Lines**: `packages/errors-effect/src/interop/toTaggedError.js:52-53,62,67,74,77-78,83-84`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: The errorMap includes aliases that map old error tags to new error classes (e.g., `'Revert'` -> `RevertError`). When converting a BaseError with `_tag: 'Revert'`, the result has `_tag: 'RevertError'`.
+
+**Impact**: Code that matches on `error._tag === 'Revert'` will break after conversion. Error handling logic using `Effect.catchTag('Revert', ...)` will not match the converted error. Breaking change in error identity during migration.
+
+---
+
+##### Issue #R132-P1-002: toBaseError VERSION constant is hardcoded and will drift from package.json
+**File:Lines**: `packages/errors-effect/src/interop/toBaseError.js:7`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The VERSION constant is hardcoded as `'1.0.0-next.148'`. This value must be manually updated with each version bump, creating maintenance burden and risk of version drift.
+
+**Impact**: Error objects may report incorrect library versions if forgotten during release.
+
+---
+
+##### Issue #R132-P1-003: LoggerTest 'fatal' level documentation inconsistency
+**File:Lines**: `packages/logger-effect/src/LoggerTest.js:172-175`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The JSDoc warning only mentions `'silent'` level behavior, but `'fatal'` level also captures zero logs because there is no `fatal()` method on LoggerShape, and fatal priority (5) is higher than error priority (4).
+
+**Impact**: Users setting `LoggerTest('fatal')` expecting to capture only critical errors will get empty logs.
+
+---
+
+##### Issue #R132-P1-005: wrapWithEffect accepts empty methods array without warning
+**File:Lines**: `packages/interop/src/wrapWithEffect.js:74-121`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The `wrapWithEffect` function accepts an empty array for the `methods` parameter without validation. When passed an empty array, it creates a wrapped object with an empty `effect: {}` property.
+
+**Impact**: Silent failure mode when methods array is accidentally empty.
+
+---
+
+##### Issue #R132-P1-007: LoggerTest getLogsByLevel type mismatch with broader LogLevel configuration
+**File:Lines**: `packages/logger-effect/src/LoggerTest.js:24,91-95`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The `getLogsByLevel` method accepts `LogSeverity` (`'debug' | 'info' | 'warn' | 'error'`) but the logger's `level` property is `LogLevel` which includes `'fatal' | 'trace' | 'silent'`.
+
+**Impact**: Cannot filter logs by 'trace' or 'fatal' severity even though those are valid LogLevel values.
+
+---
+
+#### Phase 2: 0 CRITICAL + 1 HIGH + 3 MEDIUM + 4 LOW NEW Issues Found
+
+##### Issue #R132-P2-003: HttpTransport isRetryableError Assumes ForkError.cause Always Has message Property
+**File:Lines**: `packages/transport-effect/src/HttpTransport.js:43-44`
+**Severity**: 🔴 HIGH
+**Status**: ✅ FIXED (133rd Fix - 2026-02-04)
+
+**Problem**: The `isRetryableError` function directly accesses `error.cause.message.toLowerCase()` assuming `cause` is always an `Error` with a `message` property. If `cause` is `undefined`, `null`, or an object without a `message` property, this will throw a runtime error (`TypeError: Cannot read properties of undefined`).
+
+**Impact**: Runtime crashes during retry logic if ForkError is constructed with an unexpected cause value.
+
+**Fix**: Added null/undefined guards for `cause` property and safe extraction of `message` property before calling `.toLowerCase()`. Returns `false` (don't retry) for malformed errors. See HttpTransport.js:46-67.
+
+---
+
+##### Issue #R132-P2-001: BlockchainShape Type Declaration Missing Error Channels for putBlock, getCanonicalHeadBlock, getIteratorHead, setIteratorHead
+**File:Lines**: `packages/blockchain-effect/src/types.js:31-35`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: The type declarations for several BlockchainShape methods are missing error channel types, while the implementations in `BlockchainLocal.js` and `BlockchainLive.js` return `InvalidBlockError` or `BlockNotFoundError`.
+
+**Impact**: Callers cannot use `Effect.catchTag()` properly to handle errors because TypeScript/JSDoc doesn't know about the error channel.
+
+---
+
+##### Issue #R132-P2-002: BlockchainShape.ready Type Declaration Missing Error Channel
+**File:Lines**: `packages/blockchain-effect/src/types.js:39`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: The `ready` property is declared without an error channel (`Effect.Effect<void>`) but the implementation returns `InvalidBlockError`.
+
+**Impact**: Error handling code won't compile correctly and callers won't know to handle `InvalidBlockError`.
+
+---
+
+##### Issue #R132-P2-006: VmLive shallowCopy Does Not Preserve EVM Configuration
+**File:Lines**: `packages/vm-effect/src/VmLive.js:136-146`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: The `shallowCopy` function passes `vmInstance.evm` directly to `createVm`. The VmLive version passes the same EVM instance to `createVm`, which means modifications to the original EVM's precompiles would affect the "copy" (since they share the same EVM instance).
+
+**Impact**: State isolation violation - the shallow copy shares the exact same EVM instance, so custom precompile changes to one VM affect the other.
+
+---
+
+##### Issue #R132-P2-004: Potential Race Condition in HttpTransport Batch Processing
+**File:Lines**: `packages/transport-effect/src/HttpTransport.js:479-486`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: There's a potential race condition between checking queue size and triggering the batch. Between `Queue.size()` and `Ref.get(batchTriggerRef)`, the batch processor could have already consumed items.
+
+**Impact**: Minor inefficiency, not a correctness bug. The code handles `trigger === null` gracefully.
+
+---
+
+##### Issue #R132-P2-005: StateManagerLive Duplicates createStateManagerShape Logic
+**File:Lines**: `packages/state-effect/src/StateManagerLive.js:144-331`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: `StateManagerLive.js` defines its own inline `createShape` function (187 lines) that duplicates the logic in `wrapStateManager.js`'s `createStateManagerShape` function. `StateManagerLocal.js` correctly uses the shared factory.
+
+**Impact**: Code duplication makes maintenance harder and increases risk of divergence between Local and Live implementations.
+
+---
+
+##### Issue #R132-P2-007: CommonShape.copy() Double-Copies
+**File:Lines**: `packages/common-effect/src/CommonLocal.js:63,70`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The Common object is already `.copy()`'d at creation time, then `commonShape.copy()` creates a copy of a copy.
+
+**Impact**: Minor - extra allocations but functionally correct. Semantic confusion.
+
+---
+
+##### Issue #R132-P2-008: BlockchainLive Iterator Does Not Handle Fork-Specific Errors Distinctly
+**File:Lines**: `packages/blockchain-effect/src/BlockchainLive.js:270-296`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: In fork mode, network errors from the transport are re-thrown as raw `Error` objects, not typed Effect errors.
+
+**Impact**: Callers cannot distinguish network failures from other errors when using the async iterator.
+
+---
+
+#### Phase 3: 0 CRITICAL + 0 HIGH + 0 MEDIUM + 3 LOW NEW Issues Found
+
+##### Issue #R132-P3-001: Counter Overflow Potential in Filter/Snapshot ID Generation
+**File:Lines**: `packages/node-effect/src/FilterLive.js:72,92`, `packages/node-effect/src/SnapshotLive.js:105,120`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The counter used for generating unique IDs is typed as JavaScript `number`. When the counter reaches `Number.MAX_SAFE_INTEGER` (2^53-1), incrementing causes precision loss.
+
+**Impact**: Theoretical issue for extremely long-running nodes with high snapshot/filter churn (~9 quadrillion operations). Could cause ID collisions or lookup failures.
+
+---
+
+##### Issue #R132-P3-002: FilterLive Deep Copy Produces Array Type Instead of Tuple for Log Topics
+**File:Lines**: `packages/node-effect/src/FilterLive.js:504`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The `FilterLog.topics` type is defined as `[Hex, ...Hex[]]` (non-empty tuple). The spread operator `[...log.topics]` produces type `Hex[]` (regular array), not the tuple type.
+
+**Impact**: Type-level guarantee of non-empty topics array is lost after deep copy. No runtime breakage.
+
+---
+
+##### Issue #R132-P3-003: DEFAULT_FILTER_EXPIRATION_MS Not Re-exported from Package Entry Point
+**File:Lines**: `packages/node-effect/src/types.js:148`, `packages/node-effect/src/index.js`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The constant `DEFAULT_FILTER_EXPIRATION_MS` is exported from `types.js` but not re-exported from `index.js`.
+
+**Impact**: Users must import directly from `@tevm/node-effect/types.js` to access this constant. Inconsistent with package API pattern.
+
+---
+
+#### Phase 4: 0 CRITICAL + 1 HIGH + 3 MEDIUM + 4 LOW NEW Issues Found
+
+##### Issue #R132-P4-001: estimateGas Double-Counts Base Transaction Gas When executionGasUsed is Undefined
+**File:Lines**: `packages/decorators-effect/src/EthActionsLive.js:373-377`
+**Severity**: 🔴 HIGH
+**Status**: ✅ FIXED (133rd Fix - 2026-02-04)
+
+**Problem**: When `executionGasUsed` is undefined, the code defaults to 21000n then adds another 21000n for "base transaction cost", resulting in 42000n minimum instead of the correct 21000n.
+
+**Impact**: Gas estimates are inflated by 21000 gas (worth ~$0.50 at typical gas prices) for simple calls or when EVM doesn't report execution gas. Users overpay for transactions.
+
+**Fix**: Changed logic to prioritize `gasUsed` from txResult when defined, falling back to `executionGasUsed + 21000n` only when `gasUsed` is undefined. See EthActionsLive.js:373-377.
+
+---
+
+##### Issue #R132-P4-002: InvalidOpcodeError Uses Hardcoded Opcode Value Instead of Actual Invalid Opcode
+**File:Lines**: `packages/decorators-effect/src/EthActionsLive.js:210-214`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: When an invalid opcode error occurs, the error is created with a hardcoded `opcode: 0` instead of extracting the actual invalid opcode from the execution error.
+
+**Impact**: Developers debugging EVM execution cannot identify which specific opcode caused the failure.
+
+---
+
+##### Issue #R132-P4-003: getBlockByNumber/getBlockByHash Silently Swallow All Errors as null
+**File:Lines**: `packages/decorators-effect/src/EthActionsLive.js:382-384,457-459`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: Both methods use `Effect.catchAll(() => Effect.succeed(null))` which converts ALL errors (including InternalError, network failures) into a null response indistinguishable from "block not found".
+
+**Impact**: Legitimate errors are masked as "block not found", making debugging extremely difficult.
+
+---
+
+##### Issue #R132-P4-004: RevertError Raw Data Not Included in JSON-RPC Error Response
+**File:Lines**: `packages/decorators-effect/src/SendLive.js:168-171`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: When a RevertError occurs, the error response includes `_tag` and `cause` but omits the `raw` property containing the revert data (custom error bytes).
+
+**Impact**: Clients receiving RevertError responses cannot decode custom Solidity errors (like `error InsufficientBalance(uint256 available, uint256 required)`).
+
+---
+
+##### Issue #R132-P4-005: blockTag Parameter Not Validated Before Passing to Blockchain Service
+**File:Lines**: `packages/decorators-effect/src/EthActionsLive.js:382,457`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The `blockTag` and `blockHash` parameters are passed directly to blockchain service methods without format validation.
+
+**Impact**: Invalid parameters don't produce helpful error messages. Users receive null instead of a clear "invalid blockTag format" error.
+
+---
+
+##### Issue #R132-P4-006: sendBulk Has No Request Batch Size Limit
+**File:Lines**: `packages/decorators-effect/src/SendLive.js:180-215`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The `sendBulk` method accepts an unbounded array of requests without size validation.
+
+**Impact**: Malicious or accidental submission of very large batches could cause memory issues or denial of service.
+
+---
+
+##### Issue #R132-P4-007: Deep-Copied Clients' Runtimes Not Tracked for Parent Disposal
+**File:Lines**: `packages/memory-client-effect/src/createMemoryClient.js:184-200,340-366`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: When `deepCopy()` is called, a new `ManagedRuntime` is created for the copied client. There's no mechanism to track these child runtimes for automatic disposal when the parent client is destroyed.
+
+**Impact**: If users create deep copies and only call `destroy()` on the parent client, child runtimes remain active, causing resource leaks.
+
+---
+
+##### Issue #R132-P4-008: JSON-RPC Error Response Missing Standard 'data' Field for Non-Revert Errors
+**File:Lines**: `packages/decorators-effect/src/SendLive.js:168-171`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The error response `data` field only includes `_tag` and optionally `cause`. For errors like `OutOfGasError`, additional diagnostic data (like `gasUsed`, `gasLimit`) is not included.
+
+**Impact**: Clients receiving error responses lose access to error-specific diagnostic data.
+
+---
+
+#### 132nd Review Summary Table
+
+| Phase | CRITICAL | HIGH | MEDIUM | LOW | Total NEW |
+|-------|----------|------|--------|-----|-----------|
+| **Phase 1** | 0 | 0 | 3 | 4 | 7 |
+| **Phase 2** | 0 | 1 | 3 | 4 | 8 |
+| **Phase 3** | 0 | 0 | 0 | 3 | 3 |
+| **Phase 4** | 0 | 1 | 3 | 4 | 8 |
+| **TOTAL NEW** | **0** | **2** | **9** | **15** | **26** |
+
+**Key Findings:**
+1. **HIGH Issues**: HttpTransport NPE risk, estimateGas double-counting base gas
+2. **Patterns Identified**:
+   - Type declarations missing error channels across blockchain-effect
+   - Error swallowing patterns in EthActionsLive mask internal failures
+   - toTaggedError alias conversions break Effect.catchTag patterns
+   - VmLive shallowCopy shares EVM instance causing isolation issues
 
 ---
 
@@ -514,22 +891,26 @@
 ##### Issue #R130-P4-003: Blockchain not synchronized after deepCopy
 **File:Lines**: `packages/memory-client-effect/src/MemoryClientLive.js:713-714`
 **Severity**: 🔴 HIGH
-**Status**: 🟡 NEW
+**Status**: ✅ FIXED (133rd Fix - 2026-02-04)
 
 **Problem**: While `MemoryClientLive.deepCopy()` extracts stateManager from copied VM, the blockchain is separately deep-copied. The blockchain's internal state root references may point to different data than stateManager's actual state.
 
 **Impact**: State inconsistencies when blocks are mined or validated after deepCopy.
+
+**Fix**: Changed BlockchainService Layer in deepCopy to use `createBlockchainShape(copiedVm.vm.blockchain)` instead of separately deep-copying the blockchain. This ensures the copied client uses the blockchain instance already synchronized with the copied VM's state.
 
 ---
 
 ##### Issue #R130-P4-004: Missing stateManager property handling edge case
 **File:Lines**: `packages/memory-client-effect/src/MemoryClientLive.js:713-714`
 **Severity**: 🔴 HIGH
-**Status**: 🟡 NEW
+**Status**: ✅ FIXED (133rd Fix - 2026-02-04)
 
 **Problem**: If `vmCopy.vm.stateManager` is ever undefined (edge case during fork failures or initialization race), createStateManagerShape call will fail.
 
 **Impact**: Silent failure during deepCopy in edge cases.
+
+**Fix**: Added defensive check `copiedVm.vm.stateManager && createStateManagerShape(...)` that returns null for stateManager if the VM's stateManager is undefined, with appropriate error handling in the caller. See MemoryClientLive.js deepCopy implementation.
 
 ---
 

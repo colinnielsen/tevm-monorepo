@@ -370,9 +370,11 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 					}
 
 					// Return gas used with a buffer (similar to how Ethereum nodes do it)
-					const gasUsed = execResult?.executionGasUsed ?? 21000n
-					// Add 21000 for base transaction cost
-					const totalGas = gasUsed + 21000n
+					// executionGasUsed is the gas used by EVM execution (excluding base tx cost)
+					// Default to 0n when undefined since base cost is always added below
+					const executionGas = execResult?.executionGasUsed ?? 0n
+					// Add 21000 for base transaction cost (intrinsic gas)
+					const totalGas = executionGas + 21000n
 					// Add 10% buffer for estimation safety
 					return (totalGas * 110n) / 100n
 				}),

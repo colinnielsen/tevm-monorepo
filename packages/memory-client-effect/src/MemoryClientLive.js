@@ -8,7 +8,7 @@ import { MemoryClientService } from './MemoryClientService.js'
 import { StateManagerService, createStateManagerShape } from '@tevm/state-effect'
 import { VmService } from '@tevm/vm-effect'
 import { CommonService } from '@tevm/common-effect'
-import { BlockchainService } from '@tevm/blockchain-effect'
+import { BlockchainService, createBlockchainShape } from '@tevm/blockchain-effect'
 // Note: Action services are created inline in createActionServices() to ensure
 // deepCopy creates services bound to the copied state manager
 import { SnapshotService } from '@tevm/node-effect'
@@ -707,6 +707,17 @@ const createMemoryClientShape = (deps) => {
 				// both VM execution and action services operate on the SAME state.
 				const vmCopy = yield* vm.deepCopy()
 
+				// DEFENSIVE CHECK (Issue #R130-P4-004): Verify stateManager exists before use
+				// This prevents cryptic errors if VM deepCopy partially fails or returns
+				// an incomplete VM instance.
+				if (!vmCopy.vm?.stateManager) {
+					return yield* Effect.fail(
+						new InternalError({
+							message: 'VM deepCopy failed: stateManager is undefined. The VM copy may be incomplete.',
+						})
+					)
+				}
+
 				// Extract the stateManager from the copied VM and wrap it in a StateManagerShape
 				// This ensures action services (getAccount, setAccount, etc.) and EVM execution
 				// both operate on the SAME stateManager instance, preventing state inconsistency.
@@ -719,8 +730,14 @@ const createMemoryClientShape = (deps) => {
 				// not the original state manager. (Issue #233, #234 fix)
 				const snapshotCopy = yield* snapshotService.deepCopy(stateManagerCopy)
 
-				// Deep copy blockchain to maintain service abstraction (Issue #R125-P4-002)
-				const blockchainCopy = yield* blockchain.deepCopy()
+				// SYNC FIX (Issue #R130-P4-003): Use the VM's internal blockchain, not a separate copy
+				// The VM.deepCopy() internally creates its own blockchain copy. Using that same instance
+				// ensures blockchain and VM state remain synchronized. Creating a separate copy via
+				// blockchain.deepCopy() would cause state divergence - blocks mined by the VM would
+				// not appear in the separate blockchain copy.
+				const blockchainCopy = createBlockchainShape(
+					/** @type {import('@tevm/blockchain').Chain} */ (vmCopy.vm.blockchain)
+				)
 
 				const currentReady = yield* Ref.get(readyRef)
 				const newReadyRef = yield* Ref.make(currentReady)

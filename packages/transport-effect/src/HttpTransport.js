@@ -37,11 +37,34 @@ const DEFAULT_TIMEOUT = 30000
  * @returns {boolean} - True if the error should be retried
  */
 const isRetryableError = (error) => {
-	// Get the error message from the cause
-	// ForkError always has a cause that is an Error with a message string
-	// (see catch handler in createSingleRequest and sendBatch)
-	const cause = /** @type {Error} */ (error.cause)
-	const message = cause.message.toLowerCase()
+	// Safely extract error message from the cause
+	// Handle cases where cause may be undefined, null, or lack a message property
+	const cause = error.cause
+
+	/* v8 ignore start - defensive null checks for edge cases that can't be triggered through public API */
+	// Guard: cause must exist
+	if (cause === null || cause === undefined) {
+		return false
+	}
+	/* v8 ignore stop */
+
+	// Guard: safely extract message as string
+	let message = ''
+	if (typeof cause === 'object' && 'message' in cause) {
+		const causeMessage = /** @type {{ message: unknown }} */ (cause).message
+		if (typeof causeMessage === 'string') {
+			message = causeMessage.toLowerCase()
+		}
+	/* v8 ignore start - cause is always Error from catch handler, string branch is defensive */
+	} else if (typeof cause === 'string') {
+		message = cause.toLowerCase()
+	}
+	/* v8 ignore stop */
+
+	// If we couldn't extract a message, don't retry (safer than crashing)
+	if (!message) {
+		return false
+	}
 
 	// Retry on network errors
 	if (

@@ -431,6 +431,94 @@ describe('HttpTransport', () => {
 			expect(mockFetch).toHaveBeenCalledTimes(1)
 		})
 
+		it('should NOT retry when error cause is null', async () => {
+			// Create an error-like object with null cause to simulate edge case
+			const errorWithNullCause = { message: 'test error', cause: null }
+			mockFetch.mockRejectedValue(errorWithNullCause)
+
+			const layer = HttpTransport({
+				url: 'https://example.com',
+				retryCount: 3,
+				retryDelay: 10,
+			})
+
+			const program = Effect.gen(function* () {
+				const transport = yield* TransportService
+				return yield* transport.request('eth_chainId')
+			})
+
+			const result = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(result)).toBe(true)
+			// Should only be called once since null cause errors are not retryable
+			expect(mockFetch).toHaveBeenCalledTimes(1)
+		})
+
+		it('should NOT retry when error cause is undefined', async () => {
+			// Create an error-like object with undefined cause
+			const errorWithUndefinedCause = { message: 'test error', cause: undefined }
+			mockFetch.mockRejectedValue(errorWithUndefinedCause)
+
+			const layer = HttpTransport({
+				url: 'https://example.com',
+				retryCount: 3,
+				retryDelay: 10,
+			})
+
+			const program = Effect.gen(function* () {
+				const transport = yield* TransportService
+				return yield* transport.request('eth_chainId')
+			})
+
+			const result = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(result)).toBe(true)
+			// Should only be called once since undefined cause errors are not retryable
+			expect(mockFetch).toHaveBeenCalledTimes(1)
+		})
+
+		it('should NOT retry when error cause object lacks message property', async () => {
+			// Create an error with cause that is an object but has no message property
+			const errorWithCauseNoMessage = { message: 'test', cause: { code: 123, name: 'SomeError' } }
+			mockFetch.mockRejectedValue(errorWithCauseNoMessage)
+
+			const layer = HttpTransport({
+				url: 'https://example.com',
+				retryCount: 3,
+				retryDelay: 10,
+			})
+
+			const program = Effect.gen(function* () {
+				const transport = yield* TransportService
+				return yield* transport.request('eth_chainId')
+			})
+
+			const result = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(result)).toBe(true)
+			// Should only be called once since cause without message is not retryable
+			expect(mockFetch).toHaveBeenCalledTimes(1)
+		})
+
+		it('should NOT retry when error cause is object with non-string message', async () => {
+			// Create an error with cause.message that is not a string
+			const errorWithNonStringMessage = { message: 'test', cause: { message: 12345 } }
+			mockFetch.mockRejectedValue(errorWithNonStringMessage)
+
+			const layer = HttpTransport({
+				url: 'https://example.com',
+				retryCount: 3,
+				retryDelay: 10,
+			})
+
+			const program = Effect.gen(function* () {
+				const transport = yield* TransportService
+				return yield* transport.request('eth_chainId')
+			})
+
+			const result = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(result)).toBe(true)
+			// Should only be called once since non-string message is not retryable
+			expect(mockFetch).toHaveBeenCalledTimes(1)
+		})
+
 		it('should fail after all retries are exhausted', async () => {
 			// All network errors - retries will be exhausted
 			mockFetch.mockRejectedValue(new Error('fetch failed: ECONNREFUSED'))
