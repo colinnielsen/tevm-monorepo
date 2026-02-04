@@ -554,7 +554,7 @@ describe('SnapshotLive', () => {
 			expect(result).toBe('success')
 		})
 
-		it('should delete reverted snapshot and all subsequent ones', async () => {
+		it('should preserve target snapshot and delete only subsequent ones (Anvil-compatible)', async () => {
 			const program = Effect.gen(function* () {
 				const snapshot = yield* SnapshotService
 				yield* snapshot.takeSnapshot() // 0x1
@@ -573,9 +573,10 @@ describe('SnapshotLive', () => {
 			})
 
 			const result = await Effect.runPromise(program.pipe(Effect.provide(fullLayer)))
-			expect(result.size).toBe(1)
+			// Target snapshot (0x2) is preserved, only subsequent (0x3) is deleted
+			expect(result.size).toBe(2)
 			expect(result.has1).toBe(true)
-			expect(result.has2).toBe(false)
+			expect(result.has2).toBe(true) // Target snapshot preserved for repeated reverts
 			expect(result.has3).toBe(false)
 		})
 
@@ -599,10 +600,10 @@ describe('SnapshotLive', () => {
 			})
 
 			const result = await Effect.runPromise(program.pipe(Effect.provide(fullLayer)))
-			// After reverting to 0x10, snapshots 0x1-0xf should remain, 0x10 should be deleted
-			expect(result.size).toBe(15)
+			// After reverting to 0x10, snapshots 0x1-0x10 should remain (target preserved)
+			expect(result.size).toBe(16)
 			expect(result.hasF).toBe(true)
-			expect(result.has10).toBe(false)
+			expect(result.has10).toBe(true) // Target snapshot preserved for repeated reverts
 		})
 
 		it('should convert setStateRoot defects to StateRootNotFoundError', async () => {

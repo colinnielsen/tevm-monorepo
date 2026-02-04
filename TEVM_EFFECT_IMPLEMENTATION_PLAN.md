@@ -2,12 +2,80 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-04 (Post 134th Review)
+**Last Updated**: 2026-02-04 (Post 137th Fix)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
 
 ---
 
 ## Review Agent Summary (2026-02-04)
+
+**137th FIX (2026-02-04).** Fixed 10 HIGH priority issues from 136th review.
+
+**FIXED HIGH Issues (10 total):**
+- ✅ **#R136-P1-001**: FIXED - toBaseError.d.ts now includes all 30 error types in the union (was missing 23 types: block, JSON-RPC, node, state, transaction, transport errors)
+- ✅ **#R136-P1-002**: FIXED - RequireError._tag now has JSDoc `@type {'RequireError'}` annotation for literal type generation
+- ✅ **#R136-P2-001**: FIXED - BlockchainShape types.js putBlock now declares `InvalidBlockError` error channel
+- ✅ **#R136-P2-002**: FIXED - BlockchainShape types.js getCanonicalHeadBlock now declares `BlockNotFoundError` error channel
+- ✅ **#R136-P2-003**: FIXED - BlockchainShape types.js getIteratorHead now declares `BlockNotFoundError` error channel
+- ✅ **#R136-P2-004**: FIXED - BlockchainShape types.js setIteratorHead now declares `InvalidBlockError` error channel
+- ✅ **#R136-P2-005**: FIXED - BlockchainShape types.js ready now declares `InvalidBlockError` error channel
+- ✅ **#R136-P2-006**: FIXED - CommonLocal now uses Effect.try instead of Effect.sync with proper InternalError handling
+- ✅ **#R136-P3-001**: FIXED - SetAccountLive storage values now padded to 32 bytes with `hexToBytes(value, { size: 32 })`
+- ✅ **#R136-P3-002**: FIXED - SnapshotLive revertToSnapshot now preserves target snapshot (uses `>` instead of `>=`) for Anvil-compatible repeated reverts
+
+---
+
+**136th REVIEW (2026-02-04).** Deep Parallel Opus 4.5 independent review with ultrathink (4 parallel subagents). Found 0 CRITICAL, 14 HIGH, 14 MEDIUM, 8 LOW = 36 NEW issues.
+
+**NEW HIGH Issues Found (14 total):**
+- ✅ **#R136-P1-001**: FIXED - toBaseError.d.ts missing 21 error types in union - type declaration only has 9 of 30 error types
+- ✅ **#R136-P1-002**: FIXED - RequireError._tag typed as `string` instead of literal `'RequireError'` - breaks Effect.catchTag
+- 🔴 **#R136-P1-003**: LoggerService.d.ts uses `any` types for Pino logger - loses type safety
+- ✅ **#R136-P2-001**: FIXED - BlockchainShape types.js putBlock missing error channel in Effect return type
+- ✅ **#R136-P2-002**: FIXED - BlockchainShape types.js getCanonicalHeadBlock missing error channel
+- ✅ **#R136-P2-003**: FIXED - BlockchainShape types.js getIteratorHead missing error channel
+- ✅ **#R136-P2-004**: FIXED - BlockchainShape types.js setIteratorHead missing error channel
+- ✅ **#R136-P2-005**: FIXED - BlockchainShape types.js ready property missing error channel
+- ✅ **#R136-P2-006**: FIXED - CommonLocal uses Effect.sync instead of Effect.try - hardfork exceptions escape Effect error channel
+- ✅ **#R136-P3-001**: FIXED - SetAccountLive storage values not padded to 32 bytes - EVM expects 32-byte values
+- ✅ **#R136-P3-002**: FIXED - SnapshotLive revertToSnapshot deletes target snapshot - prevents repeated reverts to same snapshot
+- 🔴 **#R136-P4-001**: RevertError `raw` field not included in JSON-RPC error response - clients cannot decode custom errors
+- 🔴 **#R136-P4-002**: getSenderAddress() can throw for unsigned/invalid transactions in block response
+- 🔴 **#R136-P4-003**: Block response missing baseFeePerGas and withdrawals fields for modern blocks
+
+**NEW MEDIUM Issues Found (14 total):**
+- 🟡 **#R136-P1-004**: logAllErrors unsafe property access on unknown error objects - can crash on nulls
+- 🟡 **#R136-P1-005**: LoggerTest uses non-deterministic timestamps - test output varies between runs
+- 🟡 **#R136-P1-006**: VERSION constant hardcoded as '1.0.0-next.148' - confirms existing issue
+- 🟡 **#R136-P2-007**: EvmLive deepCopy accesses private `_customPrecompiles` and `optsCached.profiler` via any cast
+- 🟡 **#R136-P3-003**: FilterLive counter gap on fiber interruption - ID sequence not contiguous
+- 🟡 **#R136-P3-004**: validateHex allows empty hex "0x" - should require at least one hex digit
+- 🟡 **#R136-P3-005**: GetStorageAtLive allows arbitrarily long position hex without validation
+- 🟡 **#R136-P3-006**: SetAccountLive storage key validation allows oversized keys >32 bytes
+- 🟡 **#R136-P3-007**: GetAccountLive isEmpty check ignores storageRoot - misclassifies contracts
+- 🟡 **#R136-P4-004**: getBlockByNumber/Hash silently swallow ALL errors as null - masks failures
+- 🟡 **#R136-P4-005**: getLogs returns empty array stub - not fully implemented
+- 🟡 **#R136-P4-006**: getTransactionCount only supports 'latest' blockTag - ignores historical queries
+- 🟡 **#R136-P4-007**: Type declarations use incorrect Effect return type in several methods
+- 🟡 **#R136-P4-008**: Type declarations missing several methods from implementation
+
+**NEW LOW Issues Found (8 total):**
+- 🟢 **#R136-P1-007**: effectToPromise no validation for function returning Effect
+- 🟢 **#R136-P1-008**: LoggerShape type could use stricter parameter types
+- 🟢 **#R136-P3-008**: validateAddress error message not specific enough
+- 🟢 **#R136-P3-009**: GetBalanceLive blockTag validation incomplete
+- 🟢 **#R136-P3-010**: GetCodeLive missing comprehensive blockTag handling
+- 🟢 **#R136-P3-011**: DumpStateLive returns shallow clone - mutation risk
+- 🟢 **#R136-P3-012**: LoadStateLive doesn't validate state structure comprehensively
+- 🟢 **#R136-P4-009**: Gas estimation edge case handling incomplete
+
+**Open Issues Summary (Post 137th Fix):**
+- **CRITICAL**: 0 ✅
+- **HIGH**: 6 🔴 (16 previous - 10 FIXED in 137th)
+- **MEDIUM**: 198 (184 previous + 14 NEW)
+- **LOW**: 428 (420 previous + 8 NEW)
+
+---
 
 **135th FIX (2026-02-04).** Fixed 4 HIGH priority issues from 134th review.
 

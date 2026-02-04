@@ -19,6 +19,9 @@ export class CreateRequireError extends Error {
 }
 
 export class RequireError extends Error {
+	/**
+	 * @type {'RequireError'}
+	 */
 	_tag = 'RequireError'
 	/**
 	 * @param {string} url

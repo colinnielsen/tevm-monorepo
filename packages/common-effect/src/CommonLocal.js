@@ -1,6 +1,7 @@
 import { Effect, Layer } from 'effect'
 import { createCommon, tevmDefault } from '@tevm/common'
 import { CommonService } from './CommonService.js'
+import { InternalError } from '@tevm/errors-effect'
 
 /**
  * @module @tevm/common-effect/CommonLocal
@@ -47,27 +48,35 @@ import { CommonService } from './CommonService.js'
  * })
  * ```
  *
- * @type {Layer.Layer<CommonService, never, never>}
+ * @type {Layer.Layer<CommonService, InternalError, never>}
  */
 export const CommonLocal = Layer.effect(
 	CommonService,
-	Effect.sync(() => {
-		// Create a fresh Common instance for each layer build to ensure
-		// proper isolation between different TEVM instances
-		const common = createCommon({
-			...tevmDefault,
-			id: 900,
-			hardfork: 'prague',
-			eips: [],
-			loggingLevel: 'warn',
-		}).copy()
+	Effect.try({
+		try: () => {
+			// Create a fresh Common instance for each layer build to ensure
+			// proper isolation between different TEVM instances
+			/* v8 ignore next - defensive: createCommon rarely throws in local mode */
+			const common = createCommon({
+				...tevmDefault,
+				id: 900,
+				hardfork: 'prague',
+				eips: [],
+				loggingLevel: 'warn',
+			}).copy()
 
-		return /** @type {CommonShape} */ ({
-			common,
-			chainId: 900,
-			hardfork: 'prague',
-			eips: common.ethjsCommon.eips(),
-			copy: () => common.copy(),
-		})
+			return /** @type {CommonShape} */ ({
+				common,
+				chainId: 900,
+				hardfork: 'prague',
+				eips: common.ethjsCommon.eips(),
+				copy: () => common.copy(),
+			})
+		},
+		catch: (error) =>
+			new InternalError({
+				message: `Failed to create Common instance for local mode: ${error instanceof Error ? error.message : String(error)}`,
+				cause: error,
+			}),
 	}),
 )

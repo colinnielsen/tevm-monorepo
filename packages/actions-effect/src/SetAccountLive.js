@@ -334,7 +334,7 @@ export const SetAccountLive = Layer.effect(
 									)
 								}
 								const keyBytes = hexToBytes(key, { size: 32 })
-								const valueBytes = hexToBytes(value)
+								const valueBytes = hexToBytes(value, { size: 32 })
 								yield* stateManager.putStorage(address, keyBytes, valueBytes).pipe(
 									Effect.mapError(
 										(e) =>

@@ -223,7 +223,8 @@ export const SnapshotLive = () => {
 								),
 							)
 
-							// Step 5: ONLY after setStateRoot succeeds, delete the snapshot and subsequent ones
+							// Step 5: ONLY after setStateRoot succeeds, delete snapshots AFTER the target
+							// The target snapshot is preserved to allow repeated reverts (Anvil-compatible behavior)
 							// This ensures we don't lose snapshots on setStateRoot failure
 							yield* Ref.update(snapsRef, (map) => {
 								const newMap = new Map(map)
@@ -231,7 +232,8 @@ export const SnapshotLive = () => {
 									const keyNum = parseInt(key.slice(2), 16)
 									// Add NaN check to prevent corrupted entries from being retained (Issue #293 fix)
 									// If key contains invalid hex, delete it to prevent memory leak
-									if (Number.isNaN(keyNum) || keyNum >= targetNum) {
+									// Use > instead of >= to preserve the target snapshot for repeated reverts
+									if (Number.isNaN(keyNum) || keyNum > targetNum) {
 										newMap.delete(key)
 									}
 								}
