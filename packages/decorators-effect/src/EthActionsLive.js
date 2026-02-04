@@ -435,6 +435,28 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 						gasLimit: `0x${header.gasLimit.toString(16)}`,
 						gasUsed: `0x${header.gasUsed.toString(16)}`,
 						timestamp: `0x${header.timestamp.toString(16)}`,
+						// #R148-P4-001 fix: Add post-London/Shanghai/Cancun block fields per JSON-RPC spec
+						...(header.baseFeePerGas !== undefined && header.baseFeePerGas !== null
+							? { baseFeePerGas: `0x${header.baseFeePerGas.toString(16)}` }
+							: {}),
+						// mixHash is prevRandao post-merge
+						...(header.mixHash !== undefined ? { mixHash: bytesToHex(header.mixHash) } : {}),
+						// Shanghai fields (EIP-4895)
+						...(header.withdrawalsRoot !== undefined
+							? {
+									withdrawalsRoot: bytesToHex(header.withdrawalsRoot),
+									withdrawals: block.withdrawals?.map((w) => ({
+										index: `0x${w.index.toString(16)}`,
+										validatorIndex: `0x${w.validatorIndex.toString(16)}`,
+										address: `0x${Array.from(w.address.bytes).map(b => b.toString(16).padStart(2, '0')).join('')}`,
+										amount: `0x${w.amount.toString(16)}`,
+									})) ?? [],
+								}
+							: {}),
+						// Cancun fields (EIP-4844)
+						...(header.blobGasUsed !== undefined ? { blobGasUsed: `0x${header.blobGasUsed.toString(16)}` } : {}),
+						...(header.excessBlobGas !== undefined ? { excessBlobGas: `0x${header.excessBlobGas.toString(16)}` } : {}),
+						...(header.parentBeaconBlockRoot !== undefined ? { parentBeaconBlockRoot: bytesToHex(header.parentBeaconBlockRoot) } : {}),
 						transactions: params.includeTransactions
 							? block.transactions.map((tx, txIndex) => {
 								const txJSON = tx.toJSON()
@@ -447,6 +469,19 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 										// Transaction is unsigned or has invalid signature - use zero address
 									}
 								}
+								// #R148-P4-002 fix: For typed transactions (type > 0), compute yParity from v value
+								// yParity is 0 or 1, derived from v. For EIP-2930/1559/4844, v is 0 or 1 directly (or 27/28 legacy encoding)
+								const computeYParity = () => {
+									if (tx.type === 0) return undefined // Legacy transactions don't use yParity
+									const v = txJSON.v ? BigInt(txJSON.v) : 0n
+									// For typed transactions, v is typically 0 or 1
+									// Some implementations may still use 27/28 encoding
+									if (v === 0n || v === 27n) return '0x0'
+									if (v === 1n || v === 28n) return '0x1'
+									// Fallback: compute v % 2
+									return `0x${(v % 2n).toString(16)}`
+								}
+								const yParity = computeYParity()
 								return /** @type {object} */ ({
 									blockHash: bytesToHex(block.hash()),
 									blockNumber: `0x${header.number.toString(16)}`,
@@ -464,6 +499,8 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 									v: txJSON.v ?? '0x0',
 									r: txJSON.r ?? '0x0',
 									s: txJSON.s ?? '0x0',
+									// #R148-P4-002 fix: Add yParity for typed transactions per JSON-RPC spec
+									...(yParity !== undefined ? { yParity } : {}),
 									// #R146-P4-001 fix: Convert chainId to hex (not decimal string) per JSON-RPC spec
 									...(txJSON.chainId !== undefined ? { chainId: /** @type {`0x${string}`} */ (`0x${BigInt(txJSON.chainId).toString(16)}`) } : {}),
 									...(txJSON.accessList !== undefined ? { accessList: txJSON.accessList } : {}),
@@ -521,6 +558,28 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 						gasLimit: `0x${header.gasLimit.toString(16)}`,
 						gasUsed: `0x${header.gasUsed.toString(16)}`,
 						timestamp: `0x${header.timestamp.toString(16)}`,
+						// #R148-P4-001 fix: Add post-London/Shanghai/Cancun block fields per JSON-RPC spec
+						...(header.baseFeePerGas !== undefined && header.baseFeePerGas !== null
+							? { baseFeePerGas: `0x${header.baseFeePerGas.toString(16)}` }
+							: {}),
+						// mixHash is prevRandao post-merge
+						...(header.mixHash !== undefined ? { mixHash: bytesToHex(header.mixHash) } : {}),
+						// Shanghai fields (EIP-4895)
+						...(header.withdrawalsRoot !== undefined
+							? {
+									withdrawalsRoot: bytesToHex(header.withdrawalsRoot),
+									withdrawals: block.withdrawals?.map((w) => ({
+										index: `0x${w.index.toString(16)}`,
+										validatorIndex: `0x${w.validatorIndex.toString(16)}`,
+										address: `0x${Array.from(w.address.bytes).map(b => b.toString(16).padStart(2, '0')).join('')}`,
+										amount: `0x${w.amount.toString(16)}`,
+									})) ?? [],
+								}
+							: {}),
+						// Cancun fields (EIP-4844)
+						...(header.blobGasUsed !== undefined ? { blobGasUsed: `0x${header.blobGasUsed.toString(16)}` } : {}),
+						...(header.excessBlobGas !== undefined ? { excessBlobGas: `0x${header.excessBlobGas.toString(16)}` } : {}),
+						...(header.parentBeaconBlockRoot !== undefined ? { parentBeaconBlockRoot: bytesToHex(header.parentBeaconBlockRoot) } : {}),
 						transactions: params.includeTransactions
 							? block.transactions.map((tx, txIndex) => {
 								const txJSON = tx.toJSON()
@@ -533,6 +592,19 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 										// Transaction is unsigned or has invalid signature - use zero address
 									}
 								}
+								// #R148-P4-002 fix: For typed transactions (type > 0), compute yParity from v value
+								// yParity is 0 or 1, derived from v. For EIP-2930/1559/4844, v is 0 or 1 directly (or 27/28 legacy encoding)
+								const computeYParity = () => {
+									if (tx.type === 0) return undefined // Legacy transactions don't use yParity
+									const v = txJSON.v ? BigInt(txJSON.v) : 0n
+									// For typed transactions, v is typically 0 or 1
+									// Some implementations may still use 27/28 encoding
+									if (v === 0n || v === 27n) return '0x0'
+									if (v === 1n || v === 28n) return '0x1'
+									// Fallback: compute v % 2
+									return `0x${(v % 2n).toString(16)}`
+								}
+								const yParity = computeYParity()
 								return /** @type {object} */ ({
 									blockHash: bytesToHex(block.hash()),
 									blockNumber: `0x${header.number.toString(16)}`,
@@ -550,6 +622,8 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 									v: txJSON.v ?? '0x0',
 									r: txJSON.r ?? '0x0',
 									s: txJSON.s ?? '0x0',
+									// #R148-P4-002 fix: Add yParity for typed transactions per JSON-RPC spec
+									...(yParity !== undefined ? { yParity } : {}),
 									// #R146-P4-001 fix: Convert chainId to hex (not decimal string) per JSON-RPC spec
 									...(txJSON.chainId !== undefined ? { chainId: /** @type {`0x${string}`} */ (`0x${BigInt(txJSON.chainId).toString(16)}`) } : {}),
 									...(txJSON.accessList !== undefined ? { accessList: txJSON.accessList } : {}),
@@ -652,6 +726,73 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 					// For now, return empty array as a stub
 					// TODO: Implement full getLogs support when ReceiptsManager is available (#R134-P4-007)
 					return /** @type {import('./types.js').JsonRpcLog[]} */ ([])
+				}),
+
+			// #R148-P4-006 fix: Add eth_getTransactionByHash stub
+			getTransactionByHash: (params) =>
+				Effect.gen(function* () {
+					// Validate hash format
+					if (!params.hash || typeof params.hash !== 'string') {
+						return yield* Effect.fail(
+							new InvalidParamsError({
+								method: 'eth_getTransactionByHash',
+								params: { hash: params.hash },
+								message: 'Transaction hash is required and must be a string',
+							}),
+						)
+					}
+					if (!/^0x[a-fA-F0-9]{64}$/.test(params.hash)) {
+						return yield* Effect.fail(
+							new InvalidParamsError({
+								method: 'eth_getTransactionByHash',
+								params: { hash: params.hash },
+								message: `Invalid transaction hash format: ${params.hash}. Must be a 64-character hex string prefixed with 0x`,
+							}),
+						)
+					}
+
+					// STUB: eth_getTransactionByHash requires ReceiptsManager which is not yet available in the Effect stack
+					// Full implementation requires:
+					// 1. ReceiptsManager service for looking up transaction by hash
+					// 2. BlockchainService for getting the containing block
+					// 3. Fork handling for fetching from remote RPC if not found locally
+					// For now, return null (transaction not found) as a stub
+					// TODO: Implement full getTransactionByHash when ReceiptsManager is available (#R148-P4-006)
+					return /** @type {import('./types.js').JsonRpcTransaction | null} */ (null)
+				}),
+
+			// #R148-P4-006 fix: Add eth_getTransactionReceipt stub
+			getTransactionReceipt: (params) =>
+				Effect.gen(function* () {
+					// Validate hash format
+					if (!params.hash || typeof params.hash !== 'string') {
+						return yield* Effect.fail(
+							new InvalidParamsError({
+								method: 'eth_getTransactionReceipt',
+								params: { hash: params.hash },
+								message: 'Transaction hash is required and must be a string',
+							}),
+						)
+					}
+					if (!/^0x[a-fA-F0-9]{64}$/.test(params.hash)) {
+						return yield* Effect.fail(
+							new InvalidParamsError({
+								method: 'eth_getTransactionReceipt',
+								params: { hash: params.hash },
+								message: `Invalid transaction hash format: ${params.hash}. Must be a 64-character hex string prefixed with 0x`,
+							}),
+						)
+					}
+
+					// STUB: eth_getTransactionReceipt requires ReceiptsManager which is not yet available in the Effect stack
+					// Full implementation requires:
+					// 1. ReceiptsManager service for looking up receipt by transaction hash
+					// 2. BlockchainService for getting the containing block
+					// 3. VM for re-executing the block to compute gas used
+					// 4. Fork handling for fetching from remote RPC if not found locally
+					// For now, return null (receipt not found) as a stub
+					// TODO: Implement full getTransactionReceipt when ReceiptsManager is available (#R148-P4-006)
+					return /** @type {import('./types.js').JsonRpcTransactionReceipt | null} */ (null)
 				}),
 		})
 	})

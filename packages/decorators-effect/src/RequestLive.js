@@ -236,6 +236,42 @@ export const RequestLive = /** @type {Layer.Layer<import('./RequestService.js').
 							return /** @type {T} */ (result)
 						}
 
+						// #R148-P4-006 fix: Add eth_getTransactionByHash handler
+						case 'eth_getTransactionByHash': {
+							const [txHash] = /** @type {[string]} */ (rpcParams)
+							if (!txHash) {
+								return yield* Effect.fail(
+									new InvalidParamsError({
+										method: 'eth_getTransactionByHash',
+										params: rpcParams,
+										message: 'Missing transaction hash parameter',
+									})
+								)
+							}
+							const result = yield* ethActions.getTransactionByHash({
+								hash: /** @type {import('./types.js').Hex} */ (txHash),
+							})
+							return /** @type {T} */ (result)
+						}
+
+						// #R148-P4-006 fix: Add eth_getTransactionReceipt handler
+						case 'eth_getTransactionReceipt': {
+							const [txHash] = /** @type {[string]} */ (rpcParams)
+							if (!txHash) {
+								return yield* Effect.fail(
+									new InvalidParamsError({
+										method: 'eth_getTransactionReceipt',
+										params: rpcParams,
+										message: 'Missing transaction hash parameter',
+									})
+								)
+							}
+							const result = yield* ethActions.getTransactionReceipt({
+								hash: /** @type {import('./types.js').Hex} */ (txHash),
+							})
+							return /** @type {T} */ (result)
+						}
+
 						case 'eth_accounts': {
 							const result = yield* ethActions.accounts()
 							return /** @type {T} */ (result)

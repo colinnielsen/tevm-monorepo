@@ -1,5 +1,5 @@
 import { Effect, Layer, Ref } from 'effect'
-import { FilterNotFoundError, InvalidFilterTypeError } from '@tevm/errors-effect'
+import { FilterNotFoundError, InvalidFilterTypeError, InvalidParamsError } from '@tevm/errors-effect'
 import { FilterService } from './FilterService.js'
 import { DEFAULT_FILTER_EXPIRATION_MS } from './types.js'
 
@@ -88,6 +88,21 @@ export const FilterLive = () => {
 				 */
 				const createFilter = (type, logsCriteria) =>
 					Effect.gen(function* () {
+						// #R148-P3-001 fix: Validate topics array length per EVM specification
+						// EVM events support exactly 4 topics: 1 event signature + 3 indexed parameters
+						if (logsCriteria?.topics !== undefined) {
+							const topics = logsCriteria.topics
+							if (Array.isArray(topics) && topics.length > 4) {
+								return yield* Effect.fail(
+									new InvalidParamsError({
+										method: 'createLogFilter',
+										params: { topics },
+										message: `Topics array length ${topics.length} exceeds maximum of 4 per EVM specification. EVM events support 1 event signature topic + up to 3 indexed parameter topics.`,
+									}),
+								)
+							}
+						}
+
 						// Generate unique ID
 						const id = yield* Ref.getAndUpdate(ctrRef, (n) => n + 1)
 						const hexId = toHex(id)
@@ -336,6 +351,17 @@ export const FilterLive = () => {
 
 					addLog: (/** @type {Hex} */ id, /** @type {FilterLog} */ log) =>
 						Effect.gen(function* () {
+							// #R148-P3-001 fix: Validate log topics array length per EVM specification
+							if (log.topics && log.topics.length > 4) {
+								return yield* Effect.fail(
+									new InvalidParamsError({
+										method: 'addLog',
+										params: { topics: log.topics },
+										message: `Log topics array length ${log.topics.length} exceeds maximum of 4 per EVM specification.`,
+									}),
+								)
+							}
+
 							// Atomic check-and-update using Ref.modify to prevent TOCTOU race
 							/**
 							 * @type {{ found: boolean; wrongType: boolean }}

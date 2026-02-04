@@ -2,8 +2,87 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-04 (Post 147th Fix)
+**Last Updated**: 2026-02-04 (Post 148th Review - Fixes Applied)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
+
+---
+
+**148th REVIEW (2026-02-04).** Deep Parallel Opus 4.5 independent review with ultrathink (4 parallel subagents). Found 3 CRITICAL, 15 HIGH, 18 MEDIUM, 17 LOW = 53 NEW issues.
+
+**NEW CRITICAL Issues Found (3 total):**
+- ✅ **#R148-P3-001**: FIXED - FilterLive.js now validates topics array length <= 4 entries per EVM specification. Added InvalidParamsError for invalid topics.
+- ✅ **#R148-P4-001**: FIXED - EthActionsLive.js now includes baseFeePerGas, mixHash, withdrawals, withdrawalsRoot in block responses for post-merge/Shanghai hardforks.
+- ✅ **#R148-P4-002**: FIXED - EthActionsLive.js now includes yParity field for typed transactions (EIP-2930/EIP-1559) in block responses.
+
+**NEW HIGH Issues Found (15 total):**
+- 🔴 **#R148-P2-001**: VmLive.js:62-63 - JSDoc return type says TevmError but implementation throws VmError. Type mismatch causes incorrect error handling in callers.
+- 🔴 **#R148-P3-002**: FilterLive.js:124 - createLogFilter doesn't validate topics array length. Must reject if topics.length > 4 per EVM spec.
+- 🔴 **#R148-P3-003**: ImpersonationLive.js:74 - setImpersonatedAccount doesn't validate address format. Invalid addresses (wrong length, missing 0x, non-hex) stored without validation.
+- 🔴 **#R148-P3-004**: BlockParamsLive.js:84-96 - No validation on bigint values for block parameters. Negative or excessively large values accepted without bounds checking.
+- 🔴 **#R148-P3-005**: SnapshotLive.js:206-217 - Hex format not validated before parseInt. Malformed hex strings passed to parseInt without 0x prefix validation.
+- 🔴 **#R148-P3-006**: FilterLive.js:337-377 - addLog doesn't validate FilterLog structure. Missing address, topics, or data fields not detected; corrupted filter state.
+- 🔴 **#R148-P3-007**: FilterLive.js:379-465 - addBlock/addPendingTransaction accept unknown without validation. Missing required fields not caught until later access.
+- 🔴 **#R148-P3-008**: SetAccountLive.js:352 - Storage value validation regex inconsistency. Accepts `0x` prefix optionally but downstream expects consistent format.
+- 🔴 **#R148-P3-009**: GetStorageAtLive.js:40-52 - hexToBytes doesn't validate hex format before conversion. Invalid hex (odd length, non-hex chars) causes cryptic runtime errors.
+- 🔴 **#R148-P4-003**: types.js:51 - deepCopy typed as never-error but can fail with InternalError. Caller code paths assume no error possible.
+- 🔴 **#R148-P4-004**: types.js:42 - getBlockNumber error channel mismatch. Declared error type doesn't match implementation throws.
+- 🔴 **#R148-P4-005**: TevmActionsLive.js:240-302 - loadState doesn't return void on success as typed. Returns undefined instead of proper Effect.void/unit.
+- ✅ **#R148-P4-006**: FIXED - RequestLive.js now includes eth_getTransactionByHash and eth_getTransactionReceipt handlers. EthActionsLive.js has stub implementations (returns null) awaiting ReceiptsManager integration.
+- 🔴 **#R148-P4-007**: createMemoryClient.js:184-212 - Race condition in deepCopy for ManagedRuntime creation. Concurrent deepCopy calls may share runtime references.
+- 🔴 **#R148-P4-008**: EthActionsLive.js:411-467 - Transaction type field missing in responses. Typed transactions don't include `type` field distinguishing EIP-2930 vs EIP-1559.
+
+**NEW MEDIUM Issues Found (18 total):**
+- 🟡 **#R148-P1-001**: toTaggedError.js:161-407 - Missing null/undefined coercion for message property. If message is nullish, string concatenation produces "null" or "undefined" literals.
+- 🟡 **#R148-P1-002**: LoggerTest.js:65 - 'fatal' level in priority map without corresponding method. Test logger has priority for 'fatal' but LoggerShape has no fatal() method.
+- 🟡 **#R148-P1-003**: toBaseError.js:7 - Hardcoded VERSION string '1.0.0-next.148'. Becomes stale as package versions change; should import from package.json.
+- 🟡 **#R148-P2-002**: StateManagerLive.js:92 - CommonService retrieved via Effect.context but never used. Dead code path or incomplete implementation.
+- 🟡 **#R148-P2-003**: BlockchainLocal.js:241, BlockchainLive.js:289 - Iterator errors not wrapped in InvalidBlockError. Thrown errors escape typed error channel.
+- 🟡 **#R148-P3-010**: FilterLive.js - Log filter criteria comparison uses string equality on BigInt-typed blockNumber. May fail for different bigint representations of same value.
+- 🟡 **#R148-P3-011**: SnapshotLive.js - Snapshot counter uses simple increment without overflow protection. Counter wraps after Number.MAX_SAFE_INTEGER snapshots.
+- 🟡 **#R148-P3-012**: MiningLive.js - autoMine mode doesn't validate transaction before mining. Invalid transactions cause silent failures.
+- 🟡 **#R148-P3-013**: CallLive.js - Contract call error messages truncated. Long revert reasons lose important debugging information.
+- 🟡 **#R148-P3-014**: GetAccountLive.js - getProof returns incomplete proof structure. Missing accountProof/storageProof fields for Merkle verification.
+- 🟡 **#R148-P4-009**: EthActionsLive.js - getCode returns 0x for non-existent accounts instead of null. Ambiguous result for "empty code" vs "account doesn't exist".
+- 🟡 **#R148-P4-010**: TevmActionsLive.js - dumpState returns incomplete state. Contract storage not fully serialized for large contracts.
+- 🟡 **#R148-P4-011**: MemoryClientLive.js - Event listeners not cleaned up on client dispose. Memory leak for long-running clients.
+- 🟡 **#R148-P4-012**: EthActionsLive.js - getLogs doesn't support fromBlock/toBlock range properly. Always queries single block regardless of range.
+- 🟡 **#R148-P4-013**: SendLive.js - sendTransaction doesn't wait for mining in non-autoMine mode. Returns immediately without transaction confirmation.
+- 🟡 **#R148-P4-014**: RequestLive.js - eth_subscribe/eth_unsubscribe stubs return success but don't function. Clients think subscriptions work but receive no updates.
+- 🟡 **#R148-P4-015**: EthActionsLive.js - signTransaction doesn't validate chain ID. Cross-chain replay attacks possible.
+- 🟡 **#R148-P4-016**: TevmActionsLive.js - setAccount with oversized balance not rejected. Balance exceeding max uint256 accepted silently.
+
+**NEW LOW Issues Found (17 total):**
+- 🟢 **#R148-P1-004**: TevmError.js:60 - Constructor doesn't validate message is string. Non-string message causes Error base class issues.
+- 🟢 **#R148-P1-005**: LoggerLive.js - Timestamp format uses local timezone. Non-UTC timestamps complicate log aggregation.
+- 🟢 **#R148-P1-006**: wrapWithEffect.js - Function name lost in wrapped effect. Debugging and stack traces harder to follow.
+- 🟢 **#R148-P1-007**: effectToPromise.js - No timeout configuration. Long-running effects can hang indefinitely.
+- 🟢 **#R148-P2-004**: EvmLive.js:171-173 - shallowCopy binds methods without defensive check. Already-bound methods get double-bound.
+- 🟢 **#R148-P2-005**: wrapStateManager.js:162, StateManagerLive.js:240 - Missing state root length validation. 32-byte state root not enforced.
+- 🟢 **#R148-P3-015**: FilterLive.js - Filter IDs use sequential integers. Predictable IDs allow filter enumeration attacks.
+- 🟢 **#R148-P3-016**: SnapshotLive.js - Snapshot metadata lacks timestamp. Cannot determine when snapshot was taken.
+- 🟢 **#R148-P3-017**: MiningLive.js - Block difficulty always 0. May break clients expecting non-zero difficulty for PoW chains.
+- 🟢 **#R148-P3-018**: ImpersonationLive.js - No limit on number of impersonated accounts. Memory exhaustion with many impersonations.
+- 🟢 **#R148-P3-019**: BlockParamsLive.js - Block extra data accepts any string. Should validate max length per protocol rules.
+- 🟢 **#R148-P4-017**: EthActionsLive.js - getBalance returns 0 for non-existent accounts. Indistinguishable from zero-balance accounts.
+- 🟢 **#R148-P4-018**: MemoryClientLive.js - Config changes after creation not reflected. Client uses stale config snapshot.
+- 🟢 **#R148-P4-019**: TevmActionsLive.js - Contract call gas estimate adds fixed 21000. May underestimate for contract deployments.
+- 🟢 **#R148-P4-020**: EthActionsLive.js - getBlockByHash returns null for pending block. Should return pending block data if available.
+- 🟢 **#R148-P4-021**: RequestLive.js - net_version returns hardcoded value. Doesn't match actual chain ID from config.
+- 🟢 **#R148-P4-022**: DecoratorLive.js - withTrace decorator doesn't propagate trace config. Child calls lose trace settings.
+
+**Open Issues Summary (Post 148th Review - 4 FIXED):**
+- **CRITICAL**: 4 🔴 (7 - 3 FIXED: #R148-P3-001, #R148-P4-001, #R148-P4-002)
+- **HIGH**: 46 🔴 (47 - 1 FIXED: #R148-P4-006)
+- **MEDIUM**: 288 🟡 (270 previous + 18 NEW)
+- **LOW**: 506 🟢 (489 previous + 17 NEW)
+
+**Key 148th Review Findings:**
+1. ✅ **CRITICAL - EVM Spec Violation**: Topics array not limited to 4 entries (#R148-P3-001) - **FIXED**
+2. ✅ **CRITICAL - JSON-RPC Non-compliance**: Missing baseFeePerGas, mixHash, withdrawals, yParity in responses (#R148-P4-001/002) - **FIXED**
+3. **HIGH - Input Validation Gaps**: Multiple services accept invalid input without validation (#R148-P3-002 through #R148-P3-009)
+4. **HIGH - Type Mismatches**: Error channels don't match implementations (#R148-P2-001, #R148-P4-003/004)
+5. ✅ **HIGH - Missing Methods**: Core JSON-RPC methods eth_getTransactionByHash/Receipt not implemented (#R148-P4-006) - **FIXED (stubs)**
+6. **HIGH - Race Condition**: Concurrent deepCopy may share ManagedRuntime (#R148-P4-007)
 
 ---
 

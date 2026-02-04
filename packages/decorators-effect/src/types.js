@@ -95,6 +95,67 @@
  */
 
 /**
+ * Parameters for eth_getTransactionByHash
+ * @typedef {Object} EthGetTransactionByHashParams
+ * @property {Hex} hash - Transaction hash
+ */
+
+/**
+ * Parameters for eth_getTransactionReceipt
+ * @typedef {Object} EthGetTransactionReceiptParams
+ * @property {Hex} hash - Transaction hash
+ */
+
+/**
+ * Transaction result type for JSON-RPC
+ * @typedef {Object} JsonRpcTransaction
+ * @property {Hex} blockHash - Block hash
+ * @property {Hex} blockNumber - Block number
+ * @property {Address} from - Sender address
+ * @property {Hex} gas - Gas limit
+ * @property {Hex} gasPrice - Gas price
+ * @property {Hex} hash - Transaction hash
+ * @property {Hex} input - Transaction input data
+ * @property {Hex} nonce - Transaction nonce
+ * @property {Address | null} to - Recipient address (null for contract creation)
+ * @property {Hex} transactionIndex - Transaction index in block
+ * @property {Hex} value - Value transferred
+ * @property {Hex} type - Transaction type
+ * @property {Hex} v - Recovery id
+ * @property {Hex} r - ECDSA signature r
+ * @property {Hex} s - ECDSA signature s
+ * @property {Hex} [yParity] - EIP-2718 y parity for typed transactions
+ * @property {Hex} [chainId] - Chain ID for typed transactions
+ * @property {Array<{address: Address, storageKeys: Hex[]}>} [accessList] - Access list for EIP-2930+
+ * @property {Hex} [maxFeePerGas] - Max fee per gas for EIP-1559
+ * @property {Hex} [maxPriorityFeePerGas] - Max priority fee for EIP-1559
+ * @property {Hex} [maxFeePerBlobGas] - Max fee per blob gas for EIP-4844
+ * @property {Hex[]} [blobVersionedHashes] - Blob hashes for EIP-4844
+ */
+
+/**
+ * Transaction receipt result type for JSON-RPC
+ * @typedef {Object} JsonRpcTransactionReceipt
+ * @property {Hex} blockHash - Block hash
+ * @property {Hex} blockNumber - Block number
+ * @property {Address | null} contractAddress - Created contract address (null if not a creation)
+ * @property {Hex} cumulativeGasUsed - Cumulative gas used in block
+ * @property {Hex} effectiveGasPrice - Effective gas price
+ * @property {Address} from - Sender address
+ * @property {Hex} gasUsed - Gas used by this transaction
+ * @property {JsonRpcLog[]} logs - Array of log entries
+ * @property {Hex} logsBloom - Logs bloom filter
+ * @property {Hex} status - Transaction status (0x1 for success, 0x0 for failure)
+ * @property {Address | null} to - Recipient address (null for contract creation)
+ * @property {Hex} transactionHash - Transaction hash
+ * @property {Hex} transactionIndex - Transaction index in block
+ * @property {Hex} type - Transaction type
+ * @property {Hex} [root] - State root (pre-Byzantium)
+ * @property {Hex} [blobGasUsed] - Blob gas used for EIP-4844
+ * @property {Hex} [blobGasPrice] - Blob gas price for EIP-4844
+ */
+
+/**
  * Log entry result from eth_getLogs
  * @typedef {Object} JsonRpcLog
  * @property {Address} address - Contract address
@@ -150,6 +211,8 @@
  * @property {() => import('effect').Effect.Effect<string, never, never>} web3ClientVersion - Get client version string
  * @property {(params: EthGetTransactionCountParams) => import('effect').Effect.Effect<bigint, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} getTransactionCount - Get account transaction count (nonce)
  * @property {(params: EthGetLogsParams) => import('effect').Effect.Effect<Array<JsonRpcLog>, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} getLogs - Get logs matching filter criteria (stub - returns empty array)
+ * @property {(params: EthGetTransactionByHashParams) => import('effect').Effect.Effect<JsonRpcTransaction | null, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} getTransactionByHash - Get transaction by hash (stub - returns null, requires ReceiptsManager)
+ * @property {(params: EthGetTransactionReceiptParams) => import('effect').Effect.Effect<JsonRpcTransactionReceipt | null, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} getTransactionReceipt - Get transaction receipt by hash (stub - returns null, requires ReceiptsManager)
  */
 
 /**

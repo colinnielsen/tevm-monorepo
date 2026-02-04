@@ -66,6 +66,9 @@ describe('RequestLive', () => {
 		web3ClientVersion: vi.fn(() => Effect.succeed('tevm/1.0.0')),
 		getTransactionCount: vi.fn(() => Effect.succeed(5n)),
 		getLogs: vi.fn(() => Effect.succeed([])),
+		// #R148-P4-006 fix: Add mock for getTransactionByHash and getTransactionReceipt
+		getTransactionByHash: vi.fn(() => Effect.succeed(null)),
+		getTransactionReceipt: vi.fn(() => Effect.succeed(null)),
 	})
 
 	const createMockTevmActions = () => ({
@@ -586,6 +589,46 @@ describe('RequestLive', () => {
 		).rejects.toThrow('Missing block tag parameter')
 	})
 
+	// Coverage: test includeTransactions = true case
+	it('should handle eth_getBlockByNumber with includeTransactions true', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getBlockByNumber',
+				params: ['0x64', true],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect((result as any).number).toBe('0x64')
+		expect(mocks.ethActions.getBlockByNumber).toHaveBeenCalledWith({
+			blockTag: '0x64',
+			includeTransactions: true,
+		})
+	})
+
+	// Coverage: test undefined includeTransactions case (defaults to false)
+	it('should handle eth_getBlockByNumber with undefined includeTransactions', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getBlockByNumber',
+				params: ['0x64'],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect((result as any).number).toBe('0x64')
+		expect(mocks.ethActions.getBlockByNumber).toHaveBeenCalledWith({
+			blockTag: '0x64',
+			includeTransactions: false,
+		})
+	})
+
 	it('should handle eth_getBlockByHash request', async () => {
 		const { layer, mocks } = createTestLayer()
 
@@ -616,6 +659,46 @@ describe('RequestLive', () => {
 		await expect(
 			Effect.runPromise(program.pipe(Effect.provide(layer)))
 		).rejects.toThrow('Missing block hash parameter')
+	})
+
+	// Coverage: test includeTransactions = true case for getBlockByHash
+	it('should handle eth_getBlockByHash with includeTransactions true', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getBlockByHash',
+				params: ['0x1234567890123456789012345678901234567890123456789012345678901234', true],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect((result as any).number).toBe('0x64')
+		expect(mocks.ethActions.getBlockByHash).toHaveBeenCalledWith({
+			blockHash: '0x1234567890123456789012345678901234567890123456789012345678901234',
+			includeTransactions: true,
+		})
+	})
+
+	// Coverage: test undefined includeTransactions case for getBlockByHash
+	it('should handle eth_getBlockByHash with undefined includeTransactions', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getBlockByHash',
+				params: ['0x1234567890123456789012345678901234567890123456789012345678901234'],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect((result as any).number).toBe('0x64')
+		expect(mocks.ethActions.getBlockByHash).toHaveBeenCalledWith({
+			blockHash: '0x1234567890123456789012345678901234567890123456789012345678901234',
+			includeTransactions: false,
+		})
 	})
 
 	it('should handle eth_accounts request', async () => {
@@ -848,5 +931,74 @@ describe('RequestLive', () => {
 		await expect(
 			Effect.runPromise(program.pipe(Effect.provide(layer)))
 		).rejects.toThrow('Missing filter parameters')
+	})
+
+	// #R148-P4-006 fix: Tests for eth_getTransactionByHash and eth_getTransactionReceipt
+	it('should handle eth_getTransactionByHash request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getTransactionByHash',
+				params: ['0x1234567890123456789012345678901234567890123456789012345678901234'],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toBe(null) // Stub returns null awaiting ReceiptsManager
+		expect(mocks.ethActions.getTransactionByHash).toHaveBeenCalledWith({
+			hash: '0x1234567890123456789012345678901234567890123456789012345678901234',
+		})
+	})
+
+	it('should fail eth_getTransactionByHash with missing hash', async () => {
+		const { layer } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getTransactionByHash',
+				params: [],
+			})
+		})
+
+		await expect(
+			Effect.runPromise(program.pipe(Effect.provide(layer)))
+		).rejects.toThrow('Missing transaction hash parameter')
+	})
+
+	it('should handle eth_getTransactionReceipt request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getTransactionReceipt',
+				params: ['0x1234567890123456789012345678901234567890123456789012345678901234'],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toBe(null) // Stub returns null awaiting ReceiptsManager
+		expect(mocks.ethActions.getTransactionReceipt).toHaveBeenCalledWith({
+			hash: '0x1234567890123456789012345678901234567890123456789012345678901234',
+		})
+	})
+
+	it('should fail eth_getTransactionReceipt with missing hash', async () => {
+		const { layer } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getTransactionReceipt',
+				params: [],
+			})
+		})
+
+		await expect(
+			Effect.runPromise(program.pipe(Effect.provide(layer)))
+		).rejects.toThrow('Missing transaction hash parameter')
 	})
 })

@@ -1292,6 +1292,30 @@ describe('EthActionsLive', () => {
 			}
 		})
 
+		// #R148-P4-006 coverage fix: Test stateManager.getAccount failure in getTransactionCount
+		it('should fail getTransactionCount when stateManager.getAccount fails', async () => {
+			const { layer, mocks } = createTestLayer()
+
+			// Make getAccount fail
+			mocks.stateManager.getAccount.mockReturnValueOnce(
+				Effect.fail(new Error('StateManager failure'))
+			)
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getTransactionCount({
+					address: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+				})
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit) && exit.cause._tag === 'Fail') {
+				expect(exit.cause.error._tag).toBe('InternalError')
+				expect((exit.cause.error as any).message).toContain('Failed to get account for transaction count')
+			}
+		})
+
 		it('should return empty array for getLogs (stub)', async () => {
 			const { layer } = createTestLayer()
 
@@ -1305,6 +1329,103 @@ describe('EthActionsLive', () => {
 
 			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
 			expect(result).toEqual([])
+		})
+
+		// #R148-P4-006 fix: Tests for getTransactionByHash and getTransactionReceipt stubs
+		it('should return null for getTransactionByHash (stub awaiting ReceiptsManager)', async () => {
+			const { layer } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getTransactionByHash({
+					hash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef' as `0x${string}`,
+				})
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).toBeNull()
+		})
+
+		it('should fail getTransactionByHash with invalid hash format', async () => {
+			const { layer } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getTransactionByHash({
+					hash: 'invalid-hash' as `0x${string}`,
+				})
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit) && exit.cause._tag === 'Fail') {
+				expect(exit.cause.error._tag).toBe('InvalidParamsError')
+			}
+		})
+
+		it('should fail getTransactionByHash with missing hash', async () => {
+			const { layer } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getTransactionByHash({
+					hash: undefined as any,
+				})
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit) && exit.cause._tag === 'Fail') {
+				expect(exit.cause.error._tag).toBe('InvalidParamsError')
+			}
+		})
+
+		it('should return null for getTransactionReceipt (stub awaiting ReceiptsManager)', async () => {
+			const { layer } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getTransactionReceipt({
+					hash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef' as `0x${string}`,
+				})
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).toBeNull()
+		})
+
+		it('should fail getTransactionReceipt with invalid hash format', async () => {
+			const { layer } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getTransactionReceipt({
+					hash: '0xshort' as `0x${string}`,
+				})
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit) && exit.cause._tag === 'Fail') {
+				expect(exit.cause.error._tag).toBe('InvalidParamsError')
+			}
+		})
+
+		it('should fail getTransactionReceipt with missing hash', async () => {
+			const { layer } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getTransactionReceipt({
+					hash: '' as `0x${string}`,
+				})
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit) && exit.cause._tag === 'Fail') {
+				expect(exit.cause.error._tag).toBe('InvalidParamsError')
+			}
 		})
 	})
 
