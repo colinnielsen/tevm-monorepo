@@ -2,12 +2,88 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-04 (Post 140th Review)
+**Last Updated**: 2026-02-04 (Post 143rd Fix)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
 
 ---
 
+**143rd FIX (2026-02-04).** Fixed 1 CRITICAL and 8 HIGH priority issues from 142nd review.
+
+**FIXED CRITICAL Issues (1 total):**
+- ✅ **#R142-P4-001**: FIXED - EthActionsLive.js:603 getTransactionCount now properly converts address using createAddress() before passing to stateManager.getAccount()
+
+**FIXED HIGH Issues (8 total):**
+- ✅ **#R142-P1-002**: FIXED - All 20 error classes in errors-effect/src/ now consistently include `name` property in super() call for proper Effect.ts equality/hashing
+- ✅ **#R142-P2-001**: FIXED - blockchain-effect/src/types.js shallowCopy now declares Effect.Effect<BlockchainShape, InvalidBlockError> return type
+- ✅ **#R142-P2-002**: FIXED - state-effect/src/types.js shallowCopy now declares Effect.Effect<StateManagerShape, InternalError> return type
+- ✅ **#R142-P2-003**: FIXED - evm-effect/src/types.js shallowCopy now declares Effect.Effect<EvmShape, EvmError> return type
+- ✅ **#R142-P2-004**: FIXED - vm-effect/src/types.js shallowCopy now declares Effect.Effect<VmShape, VmError> return type
+- ✅ **#R142-P3-001**: FIXED - FilterLive.js get() and getAllFilters() now perform deep copies of logs (including topics array), blocks, and tx arrays
+- ✅ **#R142-P4-002**: FIXED - TevmActionsLive.js:177 now uses optional chaining `result.createdAddress?.bytes` for safe null check
+
+---
+
 ## Review Agent Summary (2026-02-04)
+
+**142nd REVIEW (2026-02-04).** Deep Parallel Opus 4.5 independent review with ultrathink (4 parallel subagents). Found 1 CRITICAL, 8 HIGH, 14 MEDIUM, 11 LOW = 34 NEW issues.
+
+**NEW CRITICAL Issues Found (1 total):**
+- 🔴 **#R142-P4-001**: EthActionsLive.js:603 - `getTransactionCount` passes string to `stateManager.getAccount()` instead of EthjsAddress. All other usages correctly call `createEthjsAddress()` first. `eth_getTransactionCount` JSON-RPC method is broken and will not work correctly.
+
+**NEW HIGH Issues Found (8 total):**
+- 🔴 **#R142-P1-002**: Multiple error classes in errors-effect/src/ - Inconsistent `name` property in super() call affects Effect.ts equality/hashing. Some errors include `name` (NonceTooLowError, NetworkError, AccountNotFoundError, InvalidTransactionError, FilterNotFoundError) while others exclude it (InsufficientBalanceError, TevmError, OutOfGasError, RevertError). Two structurally identical errors may have different equality semantics.
+- 🔴 **#R142-P2-001**: types.js:38 (blockchain-effect) - Type declaration for `shallowCopy` is incorrect; declares sync return `() => BlockchainShape` but implementation returns `Effect.Effect<BlockchainShape, InvalidBlockError>`. TypeScript consumers will expect synchronous call.
+- 🔴 **#R142-P2-002**: types.js:47 (state-effect) - Type declaration for `shallowCopy` is incorrect; declares sync return `() => StateManagerShape` but implementation returns `Effect.Effect<StateManagerShape, InternalError>`.
+- 🔴 **#R142-P2-003**: types.js:30 (evm-effect) - Type declaration for `shallowCopy` is incorrect; declares sync return `() => EvmShape` but implementation returns `Effect.Effect<EvmShape, EvmError>`.
+- 🔴 **#R142-P2-004**: types.js:27 (vm-effect) - Type declaration for `shallowCopy` is incorrect; declares sync return `() => VmShape` but implementation returns `Effect.Effect<VmShape, VmError>`.
+- 🔴 **#R142-P3-001**: FilterLive.js:138-143,453-457 - `get()` method and `getAllFilters` perform shallow array copies of `logs`, `blocks`, `tx` using spread operator, but individual objects within arrays (especially FilterLog with topics array) are still shared references. Callers can corrupt internal filter state by mutating nested objects.
+- 🔴 **#R142-P4-002**: TevmActionsLive.js:177 - `call()` result accesses `result.createdAddress.bytes` without null check on `.bytes`. If `createdAddress` is non-null object without `bytes` property, this throws.
+- 🔴 **#R142-P4-003**: EthActionsLive.js:87-229,248-394 - `eth_call` and `eth_estimateGas` ignore `blockTag` parameter. All calls execute against latest state regardless of block tag specified. Per JSON-RPC spec, clients should support historical state queries.
+
+**NEW MEDIUM Issues Found (14 total):**
+- 🟡 **#R142-P1-001**: wrapWithEffect.js:76 - The `'effect' in instance` check uses JavaScript's `in` operator which checks entire prototype chain. If any class in prototype chain has `effect` property, validation incorrectly rejects valid instances. Should use `Object.hasOwn(instance, 'effect')`.
+- 🟡 **#R142-P1-003**: layerFromFactory.js:57-62 - No validation that `factory` or `tag` parameters are valid. If either is null/undefined/non-function, error only manifests at runtime when Layer is provided.
+- 🟡 **#R142-P1-006**: toTaggedError.js:260 - BlockNotFoundError conversion accepts `blockTag` without type validation. Malformed blockTag values passed through without validation.
+- 🟡 **#R142-P2-005**: HttpTransport.js:391 - `Queue.unbounded()` creates unbounded queue for batch requests. In high-throughput scenarios with slow network, queue can grow indefinitely causing memory exhaustion.
+- 🟡 **#R142-P2-006**: EvmLive.js:170-173 - In shallowCopy, precompile methods from `evmInstance` bound to `evmCopy`. If methods reference internal state via closure, they may still operate on original instance's internal data.
+- 🟡 **#R142-P2-007**: mapEvmError.js:46-113 - Missing error type mapping for EIP-3860 "initcode too big" error. Falls through to generic `TevmError` instead of specific error type.
+- 🟡 **#R142-P2-008**: EvmLive.js:136,139 - `deepCopy` uses `any` type casts to call `deepCopy()` on stateManager/blockchain. If runtime objects don't have this method, throws cryptic "undefined is not a function" error.
+- 🟡 **#R142-P3-002**: ImpersonationLive.js:74 - `setImpersonatedAccount` directly stores address without format validation. Invalid addresses (wrong length, missing 0x, non-hex) can be stored.
+- 🟡 **#R142-P3-003**: SetAccountLive.js:296-348 - No length validation for storage keys/values. Regex validation only checks valid hex characters but allows arbitrary length, enabling DoS via extremely long hex strings.
+- 🟡 **#R142-P3-006**: SnapshotLive.js:232-244 - All defects during `revertToSnapshot` converted to `StateRootNotFoundError` regardless of actual failure cause (I/O errors, corruption, network issues).
+- 🟡 **#R142-P4-004**: EthActionsLive.js:398-399,481-482 - `getBlockByNumber`/`getBlockByHash` catchAll swallows all errors. Cannot distinguish "block not found" from "invalid block tag format" or other genuine errors.
+- 🟡 **#R142-P4-005**: TevmActionsLive.js:176 - `call()` result returns `execResult.gas` which may not exist. EVM execResult typically has `executionGasUsed` and `gasRefund`, not `gas` property. Returns 0n or incorrect value.
+- 🟡 **#R142-P4-006**: EthActionsLive.js:438-472,522-555 - Transaction objects in block responses missing `yParity` field for typed transactions (EIP-2930 type 1, EIP-1559 type 2) per JSON-RPC spec.
+- 🟡 **#R142-P4-007**: MemoryClientLive.js:754-756 - `commonCopy.copy()` returns raw Common object, not full CommonShape. Breaks contract for recursive deep copies.
+
+**NEW LOW Issues Found (11 total):**
+- 🟢 **#R142-P1-004**: toBaseError.js:106-108 - Check `cause !== undefined` treats `null` as valid cause while `undefined` means "no cause". Semantically inconsistent.
+- 🟢 **#R142-P1-005**: LoggerTest.js:178 - LoggerTest accepts 'silent' level with no runtime warning. Combined with levelPriority['silent'] = 6, captures nothing.
+- 🟢 **#R142-P1-007**: promiseToEffect.js:81 - JSDoc template `Args` not properly connected to rest parameter implementation.
+- 🟢 **#R142-P2-009**: StateManagerLive.js:23-28, wrapStateManager.js:33-38 - `toEthjsAddress` helper duplicated identically in both files.
+- 🟢 **#R142-P2-010**: HttpTransport.js:125 - Request ID uses `Date.now()` which can produce duplicate IDs for multiple requests within same millisecond.
+- 🟢 **#R142-P2-011**: BlockchainLive.js:291-297, BlockchainLocal.js:244-250, createBlockchainShape.js:190-195 - Block-not-found detection logic duplicated across three files.
+- 🟢 **#R142-P3-004**: FilterLive.js:559 - In deepCopy(), `installed` object only shallow copied. If nested objects added, shared references between original and copy.
+- 🟢 **#R142-P3-005**: FilterLive.js:72, SnapshotLive.js:110 - Counter Refs use JavaScript number. Precision lost after MAX_SAFE_INTEGER (2^53-1), causing potential ID collisions.
+- 🟢 **#R142-P4-008**: RequestLive.js - Missing common JSON-RPC methods: eth_sendTransaction, eth_sendRawTransaction, eth_getTransactionByHash, eth_getTransactionReceipt, eth_maxPriorityFeePerGas, eth_feeHistory.
+- 🟢 **#R142-P4-009**: TevmActionsLive.js:204-238 - `dumpState()` relies on `account['deployedBytecode']` which may not be present in raw state. Contract code needs explicit fetch.
+- 🟢 **#R142-P4-010**: types.js:113-133 - `JsonRpcBlock` typedef missing post-London fields: baseFeePerGas, mixHash, withdrawals, withdrawalsRoot, blobGasUsed, excessBlobGas.
+
+**Open Issues Summary (Post 143rd Fix):**
+- **CRITICAL**: 4 🔴 (5 previous - 1 FIXED in 143rd)
+- **HIGH**: 30 🔴 (38 previous - 8 FIXED in 143rd)
+- **MEDIUM**: 244 🟡 (unchanged)
+- **LOW**: 460 🟢 (unchanged)
+
+**Key 142nd Review Findings:**
+1. **CRITICAL - getTransactionCount broken**: EthActionsLive passes raw string instead of EthjsAddress (#R142-P4-001)
+2. **HIGH - Type Declaration Pattern Issue**: All 4 Phase 2 shallowCopy type declarations claim sync return but implementations return Effect (#R142-P2-001/002/003/004)
+3. **HIGH - Shallow Copy Exposure**: FilterLive returns shallow array copies allowing nested object mutation (#R142-P3-001)
+4. **HIGH - blockTag Ignored**: eth_call and eth_estimateGas ignore blockTag parameter, always use latest state (#R142-P4-003)
+5. **MEDIUM - Unbounded Queue**: HttpTransport batch queue can grow indefinitely (#R142-P2-005)
+6. **Pattern Issue**: Inconsistent `name` in error super() calls affects Effect equality semantics (#R142-P1-002)
+
+---
 
 **141st FIX (2026-02-04).** Fixed 1 CRITICAL and 7 HIGH priority issues from 140th review.
 

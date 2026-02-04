@@ -92,6 +92,7 @@ export class StackUnderflowError extends Data.TaggedError('StackUnderflowError')
 	 */
 	constructor(props = {}) {
 		// Compute all final property values before calling super
+		const name = 'StackUnderflowError'
 		const code = StackUnderflowError.code
 		const docsPath = StackUnderflowError.docsPath
 		const requiredItems = props.requiredItems
@@ -104,7 +105,7 @@ export class StackUnderflowError extends Data.TaggedError('StackUnderflowError')
 				: 'Stack underflow error occurred.'
 
 		// Pass properties to super() for Effect.ts equality and hashing
-		super({ message, code, docsPath, cause, requiredItems, availableItems })
+		super({ name, message, code, docsPath, cause, requiredItems, availableItems })
 
 		/** @override @type {string} */
 		this.name = 'StackUnderflowError'

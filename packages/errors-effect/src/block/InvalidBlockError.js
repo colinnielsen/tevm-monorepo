@@ -103,6 +103,7 @@ export class InvalidBlockError extends Data.TaggedError('InvalidBlockError') {
 	 */
 	constructor(props = {}) {
 		// Compute all properties BEFORE calling super() for Effect.ts equality/hashing
+		const name = 'InvalidBlockError'
 		const blockNumber = props.blockNumber
 		const blockHash = props.blockHash
 		const reason = props.reason
@@ -125,7 +126,7 @@ export class InvalidBlockError extends Data.TaggedError('InvalidBlockError') {
 		const docsPath = InvalidBlockError.docsPath
 
 		// Pass ALL properties to super() for Effect.ts equality and hashing
-		super({ blockNumber, blockHash, reason, cause, message, code, docsPath })
+		super({ name, blockNumber, blockHash, reason, cause, message, code, docsPath })
 
 		/** @override @type {string} */
 		this.name = 'InvalidBlockError'

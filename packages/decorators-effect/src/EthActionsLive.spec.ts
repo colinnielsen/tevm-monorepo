@@ -713,8 +713,9 @@ describe('EthActionsLive', () => {
 			})
 
 			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
-			// Base gas (21000) + execution gas (21000) with 10% buffer
-			expect(result).toBe(46200n)
+			// Base gas (21000) + execution gas (21000) + calldata gas (EIP-2028) with 10% buffer
+			// data '0x1234' = 2 non-zero bytes = 32 gas, plus buffer overhead = 46235n
+			expect(result).toBe(46235n)
 			expect(mocks.evm.runCall).toHaveBeenCalled()
 		})
 
@@ -733,8 +734,9 @@ describe('EthActionsLive', () => {
 			})
 
 			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
-			// Base gas (21000) + execution gas (21000) with 10% buffer
-			expect(result).toBe(46200n)
+			// Base gas (21000) + execution gas (21000) + calldata gas (EIP-2028) with 10% buffer
+			// data '0x1234' = 2 non-zero bytes = 32 gas, plus buffer overhead = 46235n
+			expect(result).toBe(46235n)
 			expect(mocks.evm.runCall).toHaveBeenCalled()
 		})
 

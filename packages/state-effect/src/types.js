@@ -44,7 +44,7 @@
  * @property {(state: import('@tevm/state').TevmState) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').InternalError>} loadState - Load state from a dump
  * @property {import('effect').Effect.Effect<void, import('@tevm/errors-effect').NodeNotReadyError>} ready - Effect that completes when the state manager is ready
  * @property {() => import('effect').Effect.Effect<StateManagerShape, import('@tevm/errors-effect').InternalError>} deepCopy - Create a deep copy of the state manager. Returns InternalError if the operation fails.
- * @property {() => StateManagerShape} shallowCopy - Create a shallow copy of the state manager
+ * @property {() => import('effect').Effect.Effect<StateManagerShape, import('@tevm/errors-effect').InternalError>} shallowCopy - Create a shallow copy of the state manager
  */
 
 /**

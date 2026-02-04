@@ -91,6 +91,7 @@ export class InvalidJumpError extends Data.TaggedError('InvalidJumpError') {
 	 */
 	constructor(props = {}) {
 		// Compute all final property values before calling super
+		const name = 'InvalidJumpError'
 		const code = InvalidJumpError.code
 		const docsPath = InvalidJumpError.docsPath
 		const destination = props.destination
@@ -103,7 +104,7 @@ export class InvalidJumpError extends Data.TaggedError('InvalidJumpError') {
 				: 'Invalid jump destination'
 
 		// Pass properties to super() for Effect.ts equality and hashing
-		super({ message, code, docsPath, cause, destination, pc })
+		super({ name, message, code, docsPath, cause, destination, pc })
 
 		/** @override @type {string} */
 		this.name = 'InvalidJumpError'

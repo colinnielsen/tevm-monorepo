@@ -24,7 +24,7 @@
  * @property {(opts: import('@tevm/vm').BuildBlockOpts) => import('effect').Effect.Effect<Awaited<ReturnType<import('@tevm/vm').Vm['buildBlock']>>, VmError>} buildBlock - Build a new block. Typed error channel for exceptions.
  * @property {import('effect').Effect.Effect<void, VmError>} ready - Effect that completes when VM is ready. Has VmError error channel if initialization fails.
  * @property {() => import('effect').Effect.Effect<VmShape, VmError>} deepCopy - Create a deep copy of the VM. Returns VmError if the operation fails.
- * @property {() => VmShape} shallowCopy - Create a shallow copy of the VM. Shares the same stateManager, blockchain, and common with the original.
+ * @property {() => import('effect').Effect.Effect<VmShape, VmError>} shallowCopy - Create a shallow copy of the VM. Shares the same stateManager, blockchain, and common with the original.
  */
 
 /**

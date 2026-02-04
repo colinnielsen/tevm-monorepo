@@ -83,6 +83,7 @@ export class MethodNotFoundError extends Data.TaggedError('MethodNotFoundError')
 	 */
 	constructor(props = {}) {
 		// Compute all property values BEFORE calling super()
+		const name = 'MethodNotFoundError'
 		const method = props.method
 		const message =
 			props.message ??
@@ -94,7 +95,7 @@ export class MethodNotFoundError extends Data.TaggedError('MethodNotFoundError')
 		const cause = props.cause
 
 		// Pass all properties to super() for Effect.ts equality and hashing
-		super({ method, message, code, docsPath, cause })
+		super({ name, method, message, code, docsPath, cause })
 
 		/** @override @type {string} */
 		this.name = 'MethodNotFoundError'

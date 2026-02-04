@@ -82,6 +82,7 @@ export class FilterNotFoundError extends Data.TaggedError('FilterNotFoundError')
 	 */
 	constructor(props = {}) {
 		// Compute all properties before calling super() for Effect.ts equality/hashing
+		const name = 'FilterNotFoundError'
 		const filterId = props.filterId
 		const message =
 			props.message ??
@@ -93,7 +94,7 @@ export class FilterNotFoundError extends Data.TaggedError('FilterNotFoundError')
 		const cause = props.cause
 
 		// Pass all properties to super() for Effect.ts equality and hashing
-		super({ filterId, message, code, docsPath, cause })
+		super({ name, filterId, message, code, docsPath, cause })
 
 		/** @override @type {string} */
 		this.name = 'FilterNotFoundError'

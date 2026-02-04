@@ -91,6 +91,7 @@ export class OutOfGasError extends Data.TaggedError('OutOfGasError') {
 	 */
 	constructor(props = {}) {
 		// Compute all final property values before calling super
+		const name = 'OutOfGasError'
 		const code = OutOfGasError.code
 		const docsPath = OutOfGasError.docsPath
 		const gasUsed = props.gasUsed
@@ -103,7 +104,7 @@ export class OutOfGasError extends Data.TaggedError('OutOfGasError') {
 				: 'Out of gas error occurred.')
 
 		// Pass properties to super() for Effect.ts equality and hashing
-		super({ message, code, docsPath, cause, gasUsed, gasLimit })
+		super({ name, message, code, docsPath, cause, gasUsed, gasLimit })
 
 		/** @override @type {string} */
 		this.name = 'OutOfGasError'

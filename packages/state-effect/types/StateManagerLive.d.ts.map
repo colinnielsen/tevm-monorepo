@@ -1,1 +1,1 @@
-{"version":3,"file":"StateManagerLive.d.ts","sourceRoot":"","sources":["../src/StateManagerLive.js"],"names":[],"mappings":"AAuFO,2CAHI,uBAAuB,GACrB,KAAK,CAAC,KAAK,yCAAsB,iBAAiB,EAAE,wHAAoD,CAAC,CA0PrH;gCA3SY,OAAO,YAAY,EAAE,iBAAiB;sCACtC,OAAO,YAAY,EAAE,uBAAuB;sBArC3B,QAAQ;kCAU/B,qBAAqB"}
+{"version":3,"file":"StateManagerLive.d.ts","sourceRoot":"","sources":["../src/StateManagerLive.js"],"names":[],"mappings":"AAuFO,2CAHI,uBAAuB,GACrB,KAAK,CAAC,KAAK,yCAAsB,iBAAiB,EAAE,wHAAoD,CAAC,CAmQrH;gCApTY,OAAO,YAAY,EAAE,iBAAiB;sCACtC,OAAO,YAAY,EAAE,uBAAuB;sBArC3B,QAAQ;kCAU/B,qBAAqB"}

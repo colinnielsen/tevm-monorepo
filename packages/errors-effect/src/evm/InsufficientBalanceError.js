@@ -101,6 +101,7 @@ export class InsufficientBalanceError extends Data.TaggedError('InsufficientBala
 	 */
 	constructor(props = {}) {
 		// Compute all final property values before calling super
+		const name = 'InsufficientBalanceError'
 		const code = InsufficientBalanceError.code
 		const docsPath = InsufficientBalanceError.docsPath
 		const address = props.address
@@ -114,7 +115,7 @@ export class InsufficientBalanceError extends Data.TaggedError('InsufficientBala
 				: 'Insufficient balance error occurred.')
 
 		// Pass properties to super() for Effect.ts equality and hashing
-		super({ message, code, docsPath, cause, address, required, available })
+		super({ name, message, code, docsPath, cause, address, required, available })
 
 		/** @override @type {string} */
 		this.name = 'InsufficientBalanceError'

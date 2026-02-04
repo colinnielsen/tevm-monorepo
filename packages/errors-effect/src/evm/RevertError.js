@@ -96,6 +96,7 @@ export class RevertError extends Data.TaggedError('RevertError') {
 	 */
 	constructor(props = {}) {
 		// Compute all final property values before calling super
+		const name = 'RevertError'
 		const code = RevertError.code
 		const docsPath = RevertError.docsPath
 		const raw = props.raw
@@ -104,7 +105,7 @@ export class RevertError extends Data.TaggedError('RevertError') {
 		const message = props.message ?? (props.reason ? `Reverted: ${props.reason}` : 'Execution reverted')
 
 		// Pass properties to super() for Effect.ts equality and hashing
-		super({ message, code, docsPath, cause, raw, reason })
+		super({ name, message, code, docsPath, cause, raw, reason })
 
 		/** @override @type {string} */
 		this.name = 'RevertError'

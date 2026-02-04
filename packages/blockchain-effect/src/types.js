@@ -35,7 +35,7 @@
  * @property {(blockHash: Uint8Array) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').BlockNotFoundError>} delBlock - Delete a block from the blockchain
  * @property {(header: import('@tevm/block').BlockHeader, height?: bigint) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').InvalidBlockError>} validateHeader - Validate a block header
  * @property {() => import('effect').Effect.Effect<BlockchainShape, import('@tevm/errors-effect').InvalidBlockError>} deepCopy - Create a deep copy of the blockchain. Returns InvalidBlockError if the operation fails.
- * @property {() => BlockchainShape} shallowCopy - Create a shallow copy of the blockchain
+ * @property {() => import('effect').Effect.Effect<BlockchainShape, import('@tevm/errors-effect').InvalidBlockError>} shallowCopy - Create a shallow copy of the blockchain
  * @property {import('effect').Effect.Effect<void, import('@tevm/errors-effect').InvalidBlockError>} ready - Effect that completes when the blockchain is ready
  * @property {(start: bigint, end: bigint) => AsyncIterable<import('@tevm/block').Block>} iterator - Iterate through blocks in a range from start to end (inclusive)
  */

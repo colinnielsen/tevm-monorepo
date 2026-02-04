@@ -86,6 +86,7 @@ export class BlockNotFoundError extends Data.TaggedError('BlockNotFoundError') {
 	 */
 	constructor(props = {}) {
 		// Compute all properties BEFORE calling super() for Effect.ts equality/hashing
+		const name = 'BlockNotFoundError'
 		const blockTag = props.blockTag
 		const cause = props.cause
 		const message =
@@ -97,7 +98,7 @@ export class BlockNotFoundError extends Data.TaggedError('BlockNotFoundError') {
 		const docsPath = BlockNotFoundError.docsPath
 
 		// Pass ALL properties to super() for Effect.ts equality and hashing
-		super({ blockTag, cause, message, code, docsPath })
+		super({ name, blockTag, cause, message, code, docsPath })
 
 		/** @override @type {string} */
 		this.name = 'BlockNotFoundError'

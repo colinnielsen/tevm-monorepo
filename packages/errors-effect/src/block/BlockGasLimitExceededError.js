@@ -91,6 +91,7 @@ export class BlockGasLimitExceededError extends Data.TaggedError('BlockGasLimitE
 	 */
 	constructor(props = {}) {
 		// Compute all properties BEFORE calling super() for Effect.ts equality/hashing
+		const name = 'BlockGasLimitExceededError'
 		const blockGasLimit = props.blockGasLimit
 		const gasUsed = props.gasUsed
 		const cause = props.cause
@@ -110,7 +111,7 @@ export class BlockGasLimitExceededError extends Data.TaggedError('BlockGasLimitE
 		const docsPath = BlockGasLimitExceededError.docsPath
 
 		// Pass ALL properties to super() for Effect.ts equality and hashing
-		super({ blockGasLimit, gasUsed, cause, message, code, docsPath })
+		super({ name, blockGasLimit, gasUsed, cause, message, code, docsPath })
 
 		/** @override @type {string} */
 		this.name = 'BlockGasLimitExceededError'

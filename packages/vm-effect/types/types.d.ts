@@ -39,7 +39,7 @@ export type VmShape = {
     /**
      * - Create a shallow copy of the VM. Shares the same stateManager, blockchain, and common with the original.
      */
-    shallowCopy: () => VmShape;
+    shallowCopy: () => import("effect").Effect.Effect<VmShape, VmError>;
 };
 /**
  * Configuration options for VmLive layer.

@@ -82,6 +82,7 @@ export class InvalidOpcodeError extends Data.TaggedError('InvalidOpcodeError') {
 	 */
 	constructor(props = {}) {
 		// Compute all final property values before calling super
+		const name = 'InvalidOpcodeError'
 		const code = InvalidOpcodeError.code
 		const docsPath = InvalidOpcodeError.docsPath
 		const opcode = props.opcode
@@ -89,7 +90,7 @@ export class InvalidOpcodeError extends Data.TaggedError('InvalidOpcodeError') {
 		const message = props.message ?? (props.opcode !== undefined ? `Invalid opcode: 0x${props.opcode.toString(16)}` : 'Invalid opcode encountered')
 
 		// Pass properties to super() for Effect.ts equality and hashing
-		super({ message, code, docsPath, cause, opcode })
+		super({ name, message, code, docsPath, cause, opcode })
 
 		/** @override @type {string} */
 		this.name = 'InvalidOpcodeError'

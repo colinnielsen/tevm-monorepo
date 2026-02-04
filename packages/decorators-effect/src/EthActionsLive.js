@@ -599,8 +599,29 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 						)
 					}
 
+					// Import createAddress for proper address conversion (#R142-P4-001)
+					const { createAddress } = yield* Effect.tryPromise({
+						try: () => import('@tevm/address'),
+						catch: (e) =>
+							new InternalError({
+								message: `Failed to import @tevm/address: ${e instanceof Error ? e.message : String(e)}`,
+								cause: e,
+							}),
+					})
+
+					// Convert hex string to EthjsAddress object (#R142-P4-001)
+					const ethjsAddress = yield* Effect.try({
+						try: () => createAddress(address.toLowerCase()),
+						catch: (e) =>
+							new InvalidParamsError({
+								method: 'eth_getTransactionCount',
+								params: { address },
+								message: `Invalid address: ${e instanceof Error ? e.message : String(e)}`,
+							}),
+					})
+
 					// Get account from state manager
-					const account = yield* stateManager.getAccount(address.toLowerCase()).pipe(
+					const account = yield* stateManager.getAccount(ethjsAddress).pipe(
 						Effect.mapError(
 							(e) =>
 								new InternalError({

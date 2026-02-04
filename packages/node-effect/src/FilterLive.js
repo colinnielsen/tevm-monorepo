@@ -137,9 +137,22 @@ export const FilterLive = () => {
 							// #R140-P3-001 fix: Use 'tx' field (not 'pendingTransactions') per Filter type definition
 							return {
 								...filter,
-								logs: Array.isArray(filter.logs) ? [...filter.logs] : [],
-								blocks: Array.isArray(filter.blocks) ? [...filter.blocks] : [],
-								tx: Array.isArray(filter.tx) ? [...filter.tx] : [],
+								// #R142-P3-001 fix: Deep copy logs including topics arrays to prevent external mutation
+								logs: Array.isArray(filter.logs)
+									? filter.logs.map((log) => ({ ...log, topics: [...log.topics] }))
+									: [],
+								// #R142-P3-001 fix: Deep copy blocks - check if object before spreading
+								blocks: Array.isArray(filter.blocks)
+									? filter.blocks.map((b) =>
+											b !== null && typeof b === 'object' ? { .../** @type {object} */ (b) } : b,
+										)
+									: [],
+								// #R142-P3-001 fix: Deep copy tx - check if object before spreading
+								tx: Array.isArray(filter.tx)
+									? filter.tx.map((t) =>
+											t !== null && typeof t === 'object' ? { .../** @type {object} */ (t) } : t,
+										)
+									: [],
 								registeredListeners: Array.isArray(filter.registeredListeners) ? [...filter.registeredListeners] : [],
 								// Deep copy logsCriteria if present
 								// #R140-P3-002 fix: Check Array.isArray before calling .map() since topics can be Hex string
@@ -449,11 +462,25 @@ export const FilterLive = () => {
 							for (const [id, filter] of m) {
 								// Create defensive copy of each filter with safe array defaults
 								// #R140-P3-001 fix: Use 'tx' field (not 'pendingTransactions') per Filter type definition
+								// #R142-P3-001 fix: Deep copy all nested objects to prevent external mutation
 								copy.set(id, {
 									...filter,
-									logs: Array.isArray(filter.logs) ? [...filter.logs] : [],
-									blocks: Array.isArray(filter.blocks) ? [...filter.blocks] : [],
-									tx: Array.isArray(filter.tx) ? [...filter.tx] : [],
+									// Deep copy logs including topics arrays
+									logs: Array.isArray(filter.logs)
+										? filter.logs.map((log) => ({ ...log, topics: [...log.topics] }))
+										: [],
+									// Deep copy blocks - check if object before spreading
+									blocks: Array.isArray(filter.blocks)
+										? filter.blocks.map((b) =>
+												b !== null && typeof b === 'object' ? { .../** @type {object} */ (b) } : b,
+											)
+										: [],
+									// Deep copy tx - check if object before spreading
+									tx: Array.isArray(filter.tx)
+										? filter.tx.map((t) =>
+												t !== null && typeof t === 'object' ? { .../** @type {object} */ (t) } : t,
+											)
+										: [],
 									registeredListeners: Array.isArray(filter.registeredListeners) ? [...filter.registeredListeners] : [],
 									// #R140-P3-002 fix: Check Array.isArray before calling .map() since topics can be Hex string
 									...(filter.logsCriteria && {

@@ -82,6 +82,7 @@ export class StackOverflowError extends Data.TaggedError('StackOverflowError') {
 	 */
 	constructor(props = {}) {
 		// Compute all final property values before calling super
+		const name = 'StackOverflowError'
 		const code = StackOverflowError.code
 		const docsPath = StackOverflowError.docsPath
 		const stackSize = props.stackSize
@@ -93,7 +94,7 @@ export class StackOverflowError extends Data.TaggedError('StackOverflowError') {
 				: 'Stack overflow error occurred.'
 
 		// Pass properties to super() for Effect.ts equality and hashing
-		super({ message, code, docsPath, cause, stackSize })
+		super({ name, message, code, docsPath, cause, stackSize })
 
 		/** @override @type {string} */
 		this.name = 'StackOverflowError'

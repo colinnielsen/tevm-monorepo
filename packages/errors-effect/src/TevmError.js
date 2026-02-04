@@ -59,13 +59,14 @@ export class TevmError extends Data.TaggedError('TevmError') {
 	 */
 	constructor(props) {
 		// Compute all final property values before calling super
+		const name = 'TevmError'
 		const code = props.code ?? 0
 		const message = props.message
 		const docsPath = props.docsPath
 		const cause = props.cause
 
 		// Pass properties to super() for Effect.ts equality and hashing
-		super({ message, code, docsPath, cause })
+		super({ name, message, code, docsPath, cause })
 
 		/** @override @type {string} */
 		this.name = 'TevmError'

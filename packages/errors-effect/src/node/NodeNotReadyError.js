@@ -82,6 +82,7 @@ export class NodeNotReadyError extends Data.TaggedError('NodeNotReadyError') {
 	 */
 	constructor(props = {}) {
 		// Compute all properties before calling super() for Effect.ts equality/hashing
+		const name = 'NodeNotReadyError'
 		const reason = props.reason
 		const message =
 			props.message ??
@@ -93,7 +94,7 @@ export class NodeNotReadyError extends Data.TaggedError('NodeNotReadyError') {
 		const cause = props.cause
 
 		// Pass all properties to super() for Effect.ts equality and hashing
-		super({ reason, message, code, docsPath, cause })
+		super({ name, reason, message, code, docsPath, cause })
 
 		/** @override @type {string} */
 		this.name = 'NodeNotReadyError'

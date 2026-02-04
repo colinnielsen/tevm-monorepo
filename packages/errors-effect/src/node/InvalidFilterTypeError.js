@@ -101,6 +101,7 @@ export class InvalidFilterTypeError extends Data.TaggedError('InvalidFilterTypeE
 	 */
 	constructor(props = {}) {
 		// Compute all properties before calling super() for Effect.ts equality/hashing
+		const name = 'InvalidFilterTypeError'
 		const filterId = props.filterId
 		const expectedType = props.expectedType
 		const actualType = props.actualType
@@ -116,7 +117,7 @@ export class InvalidFilterTypeError extends Data.TaggedError('InvalidFilterTypeE
 		const cause = props.cause
 
 		// Pass all properties to super() for Effect.ts equality and hashing
-		super({ filterId, expectedType, actualType, message, code, docsPath, cause })
+		super({ name, filterId, expectedType, actualType, message, code, docsPath, cause })
 
 		/** @override @type {string} */
 		this.name = 'InvalidFilterTypeError'

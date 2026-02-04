@@ -93,7 +93,7 @@ export type StateManagerShape = {
     /**
      * - Create a shallow copy of the state manager
      */
-    shallowCopy: () => StateManagerShape;
+    shallowCopy: () => import("effect").Effect.Effect<StateManagerShape, import("@tevm/errors-effect").InternalError>;
 };
 /**
  * Configuration options for StateManagerLocal layer

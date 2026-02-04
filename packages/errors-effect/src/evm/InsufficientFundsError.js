@@ -101,6 +101,7 @@ export class InsufficientFundsError extends Data.TaggedError('InsufficientFundsE
 	 */
 	constructor(props = {}) {
 		// Compute all final property values before calling super
+		const name = 'InsufficientFundsError'
 		const code = InsufficientFundsError.code
 		const docsPath = InsufficientFundsError.docsPath
 		const address = props.address
@@ -114,7 +115,7 @@ export class InsufficientFundsError extends Data.TaggedError('InsufficientFundsE
 				: 'Insufficient funds for gas * price + value'
 
 		// Pass properties to super() for Effect.ts equality and hashing
-		super({ message, code, docsPath, cause, address, required, available })
+		super({ name, message, code, docsPath, cause, address, required, available })
 
 		/** @override @type {string} */
 		this.name = 'InsufficientFundsError'

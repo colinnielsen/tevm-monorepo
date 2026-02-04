@@ -60,7 +60,7 @@ export type BlockchainShape = {
     /**
      * - Create a shallow copy of the blockchain
      */
-    shallowCopy: () => BlockchainShape;
+    shallowCopy: () => import("effect").Effect.Effect<BlockchainShape, import("@tevm/errors-effect").InvalidBlockError>;
     /**
      * - Effect that completes when the blockchain is ready
      */

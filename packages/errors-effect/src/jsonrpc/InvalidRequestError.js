@@ -75,13 +75,14 @@ export class InvalidRequestError extends Data.TaggedError('InvalidRequestError')
 	 */
 	constructor(props = {}) {
 		// Compute all property values BEFORE calling super()
+		const name = 'InvalidRequestError'
 		const message = props.message ?? 'Invalid JSON-RPC request'
 		const code = InvalidRequestError.code
 		const docsPath = InvalidRequestError.docsPath
 		const cause = props.cause
 
 		// Pass all properties to super() for Effect.ts equality and hashing
-		super({ message, code, docsPath, cause })
+		super({ name, message, code, docsPath, cause })
 
 		/** @override @type {string} */
 		this.name = 'InvalidRequestError'

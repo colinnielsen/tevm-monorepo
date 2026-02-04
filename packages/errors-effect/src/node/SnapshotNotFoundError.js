@@ -82,6 +82,7 @@ export class SnapshotNotFoundError extends Data.TaggedError('SnapshotNotFoundErr
 	 */
 	constructor(props = {}) {
 		// Compute all properties before calling super() for Effect.ts equality/hashing
+		const name = 'SnapshotNotFoundError'
 		const snapshotId = props.snapshotId
 		const message =
 			props.message ??
@@ -93,7 +94,7 @@ export class SnapshotNotFoundError extends Data.TaggedError('SnapshotNotFoundErr
 		const cause = props.cause
 
 		// Pass all properties to super() for Effect.ts equality and hashing
-		super({ snapshotId, message, code, docsPath, cause })
+		super({ name, snapshotId, message, code, docsPath, cause })
 
 		/** @override @type {string} */
 		this.name = 'SnapshotNotFoundError'

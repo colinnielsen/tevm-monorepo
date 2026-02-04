@@ -85,6 +85,7 @@ export class InternalError extends Data.TaggedError('InternalError') {
 	 */
 	constructor(props = {}) {
 		// Compute all property values BEFORE calling super()
+		const name = 'InternalError'
 		const meta = props.meta
 		const message = props.message ?? 'Internal JSON-RPC error'
 		const code = InternalError.code
@@ -92,7 +93,7 @@ export class InternalError extends Data.TaggedError('InternalError') {
 		const cause = props.cause
 
 		// Pass all properties to super() for Effect.ts equality and hashing
-		super({ meta, message, code, docsPath, cause })
+		super({ name, meta, message, code, docsPath, cause })
 
 		/** @override @type {string} */
 		this.name = 'InternalError'

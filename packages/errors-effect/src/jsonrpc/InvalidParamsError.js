@@ -92,6 +92,7 @@ export class InvalidParamsError extends Data.TaggedError('InvalidParamsError') {
 	 */
 	constructor(props = {}) {
 		// Compute all property values BEFORE calling super()
+		const name = 'InvalidParamsError'
 		const method = props.method
 		const params = props.params
 		const message =
@@ -104,7 +105,7 @@ export class InvalidParamsError extends Data.TaggedError('InvalidParamsError') {
 		const cause = props.cause
 
 		// Pass all properties to super() for Effect.ts equality and hashing
-		super({ method, params, message, code, docsPath, cause })
+		super({ name, method, params, message, code, docsPath, cause })
 
 		/** @override @type {string} */
 		this.name = 'InvalidParamsError'
