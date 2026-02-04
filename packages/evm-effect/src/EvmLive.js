@@ -113,22 +113,31 @@ export const EvmLive = (options = {}) => {
 
 					getActivePrecompiles: () => Effect.sync(() => evmInstance.precompiles),
 
+					// #R140-P2-003 fix: Use Effect.try instead of Effect.sync since precompile operations can throw
 					addCustomPrecompile: (precompile) =>
-						Effect.sync(() => evmInstance.addCustomPrecompile(precompile)),
+						Effect.try({
+							try: () => evmInstance.addCustomPrecompile(precompile),
+							catch: (e) => mapEvmError(e),
+						}),
 
+					// #R140-P2-003 fix: Use Effect.try instead of Effect.sync since precompile operations can throw
 					removeCustomPrecompile: (precompile) =>
-						Effect.sync(() => evmInstance.removeCustomPrecompile(precompile)),
+						Effect.try({
+							try: () => evmInstance.removeCustomPrecompile(precompile),
+							catch: (e) => mapEvmError(e),
+						}),
 
 					deepCopy: () =>
 						Effect.gen(function* () {
 							// Deep copy requires copying the stateManager and blockchain
 							// Then creating a new EVM with the copied instances
+							// Note: Using type casts because deepCopy is not on the TS interfaces but exists at runtime
 							const stateManagerCopy = yield* Effect.tryPromise({
-								try: () => evmInstance.stateManager.deepCopy(),
+								try: () => /** @type {any} */ (evmInstance.stateManager).deepCopy(),
 								catch: (e) => mapEvmError(e),
 							})
 							const blockchainCopy = yield* Effect.tryPromise({
-								try: () => evmInstance.blockchain.deepCopy(),
+								try: () => /** @type {any} */ (evmInstance.blockchain).deepCopy(),
 								catch: (e) => mapEvmError(e),
 							})
 							const evmCopy = yield* Effect.tryPromise({
@@ -152,15 +161,20 @@ export const EvmLive = (options = {}) => {
 							return createShape(evmCopy)
 						}),
 
-					shallowCopy: () => {
-						// shallowCopy uses the underlying EVM's shallowCopy method
-						// Note: the shallow copy shares the same stateManager and blockchain
-						const evmCopy = /** @type {import('@tevm/evm').Evm} */ (evmInstance.shallowCopy())
-						// Bind custom precompile methods that Tevm adds
-						evmCopy.addCustomPrecompile = evmInstance.addCustomPrecompile.bind(evmCopy)
-						evmCopy.removeCustomPrecompile = evmInstance.removeCustomPrecompile.bind(evmCopy)
-						return createShape(evmCopy)
-					},
+					// #R140-P2-007 fix: Wrap shallowCopy in Effect.try for consistent error handling
+					shallowCopy: () =>
+						Effect.try({
+							try: () => {
+								// shallowCopy uses the underlying EVM's shallowCopy method
+								// Note: the shallow copy shares the same stateManager and blockchain
+								const evmCopy = /** @type {import('@tevm/evm').Evm} */ (evmInstance.shallowCopy())
+								// Bind custom precompile methods that Tevm adds
+								evmCopy.addCustomPrecompile = evmInstance.addCustomPrecompile.bind(evmCopy)
+								evmCopy.removeCustomPrecompile = evmInstance.removeCustomPrecompile.bind(evmCopy)
+								return createShape(evmCopy)
+							},
+							catch: (e) => mapEvmError(e),
+						}),
 				}
 				return shape
 			}

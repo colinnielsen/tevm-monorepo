@@ -247,7 +247,16 @@ export const createStateManagerShape = (sm) => {
 				return createStateManagerShape(copiedSm)
 			}),
 
-		shallowCopy: () => createStateManagerShape(/** @type {import('@tevm/state').StateManager} */ (sm.shallowCopy())),
+		// #R140-P2-008 fix: Wrap shallowCopy in Effect.try for consistent error handling
+		shallowCopy: () =>
+			Effect.try({
+				try: () => createStateManagerShape(/** @type {import('@tevm/state').StateManager} */ (sm.shallowCopy())),
+				catch: (error) =>
+					new InternalError({
+						message: `Failed to create shallow copy of state manager`,
+						cause: /** @type {Error} */ (error),
+					}),
+			}),
 	}
 	return shape
 }

@@ -1,4 +1,4 @@
-export function CommonFromFork(options?: CommonFromForkOptions): Layer.Layer<import("effect/Context").Tag<any, any>, never, import("effect/Context").Tag<any, any>>;
+export function CommonFromFork(options?: CommonFromForkOptions): Layer.Layer<import("effect/Context").Tag<any, any>, InternalError, import("effect/Context").Tag<any, any>>;
 export type CommonShape = import("./types.js").CommonShape;
 export type Hardfork = import("./types.js").Hardfork;
 export type LogLevel = import("./types.js").LogLevel;
@@ -20,4 +20,5 @@ export type CommonFromForkOptions = {
     loggingLevel?: LogLevel;
 };
 import { Layer } from 'effect';
+import { InternalError } from '@tevm/errors-effect';
 //# sourceMappingURL=CommonFromFork.d.ts.map

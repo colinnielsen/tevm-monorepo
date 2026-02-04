@@ -227,7 +227,8 @@ describe('StateManagerLocal', () => {
 			const program = Effect.gen(function* () {
 				const stateManager = yield* StateManagerService
 				yield* stateManager.ready
-				const copy = stateManager.shallowCopy()
+				// #R140-P2-008 fix: shallowCopy now returns an Effect for consistent error handling
+				const copy = yield* stateManager.shallowCopy()
 				expect(copy).toBeDefined()
 				expect(copy.stateManager).toBeDefined()
 				return 'shallow copied'

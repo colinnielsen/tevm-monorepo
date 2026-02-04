@@ -53,6 +53,7 @@
  * )
  * ```
  *
+ * @returns {Layer.Layer<typeof ForkConfigService, ForkError, TransportService>} A Layer providing ForkConfigService that may fail with ForkError during RPC calls or parsing
  */
 export const ForkConfigFromRpc: Layer.Layer<any, unknown, any>;
 export type ForkConfigShape = import("./types.js").ForkConfigShape;

@@ -277,16 +277,29 @@ describe('createBlockchainShape', () => {
 	})
 
 	describe('shallowCopy', () => {
-		it('should create a shallow copy of the blockchain', () => {
+		// #R140-P2-001 fix: shallowCopy now returns an Effect for consistent error handling
+		it('should create a shallow copy of the blockchain', async () => {
 			const mockChain = createMockChain()
 			const shape = createBlockchainShape(mockChain as any)
 
-			const copy = shape.shallowCopy()
+			const copy = await Effect.runPromise(shape.shallowCopy())
 
 			expect(copy).toBeDefined()
 			expect(mockChain.shallowCopy).toHaveBeenCalled()
 			// The copy should be a new BlockchainShape wrapping the copied chain
 			expect(typeof copy.getBlock).toBe('function')
+		})
+
+		it('should fail with InvalidBlockError on error', async () => {
+			const mockChain = createMockChain()
+			mockChain.shallowCopy.mockImplementation(() => {
+				throw new Error('Shallow copy failed')
+			})
+			const shape = createBlockchainShape(mockChain as any)
+
+			const exit = await Effect.runPromiseExit(shape.shallowCopy())
+
+			expect(Exit.isFailure(exit)).toBe(true)
 		})
 	})
 

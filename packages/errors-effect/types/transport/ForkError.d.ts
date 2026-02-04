@@ -38,6 +38,15 @@ export class ForkError extends ForkError_base {
      */
     static docsPath: string;
     /**
+     * Safely extract error code from a cause object.
+     * This method provides explicit type guards to handle various cause structures
+     * without silent failures if the cause shape changes (#R127-P1-001 fix).
+     *
+     * @param {unknown} cause - The underlying cause of the error
+     * @returns {number} The extracted code or the default ForkError.code
+     */
+    static extractCodeFromCause(cause: unknown): number;
+    /**
      * Constructs a new ForkError
      * @param {Object} props - Error properties
      * @param {string} [props.method] - The JSON-RPC method that failed

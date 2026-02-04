@@ -90,6 +90,11 @@ const hexToBytes = (hex) => {
  * Effect.runPromise(program.pipe(Effect.provide(layer)))
  * ```
  *
+ * @returns {import('effect').Layer.Layer<
+ *   import('./SnapshotService.js').SnapshotService,
+ *   never,
+ *   import('@tevm/state-effect').StateManagerService
+ * >}
  */
 export const SnapshotLive = () => {
 	return Layer.effect(
@@ -139,12 +144,37 @@ export const SnapshotLive = () => {
 								Effect.tapError(() => stateMgr.revert().pipe(Effect.catchAll(() => Effect.void))),
 							)
 
-							// Store snapshot
+							// Store snapshot with DEEP COPY of state to prevent mutation corruption
+							// (CRITICAL FIX #R139-P3-001: state must be deep copied, not stored by reference)
+							/** @type {Record<string, any>} */
+							const stateCopy = {}
+							for (const [address, accountStorage] of Object.entries(state)) {
+								// Check if this is an AccountStorage object (has nonce/balance) or a primitive/other value
+								// This allows tests to use mock state with non-AccountStorage values
+								if (accountStorage && typeof accountStorage === 'object' && ('nonce' in accountStorage || 'balance' in accountStorage)) {
+									// Deep copy AccountStorage with bigint values preserved
+									stateCopy[address] = {
+										nonce: accountStorage.nonce,
+										balance: accountStorage.balance,
+										storageRoot: accountStorage.storageRoot,
+										codeHash: accountStorage.codeHash,
+										...(accountStorage.deployedBytecode && { deployedBytecode: accountStorage.deployedBytecode }),
+										// Deep copy storage if present (StorageDump is { [slot]: value })
+										...(accountStorage.storage && {
+											storage: { ...accountStorage.storage },
+										}),
+									}
+								} else {
+									// For non-AccountStorage values (e.g. test markers), copy directly
+									stateCopy[address] = accountStorage
+								}
+							}
+
 							yield* Ref.update(snapsRef, (map) => {
 								const newMap = new Map(map)
 								newMap.set(hexId, {
 									stateRoot: bytesToHex(stateRoot),
-									state,
+									state: stateCopy,
 								})
 								return newMap
 							})
@@ -241,9 +271,63 @@ export const SnapshotLive = () => {
 							})
 						}),
 
-					getSnapshot: (/** @type {Hex} */ id) => Ref.get(snapsRef).pipe(Effect.map((m) => m.get(id))),
+					// Return a defensive copy of snapshot to prevent external mutation (#R139-P3-003 fix)
+					getSnapshot: (/** @type {Hex} */ id) => Ref.get(snapsRef).pipe(
+						Effect.map((m) => {
+							const snapshot = m.get(id)
+							if (!snapshot) return undefined
+							// Deep copy the snapshot to prevent external mutation
+							/** @type {Record<string, any>} */
+							const stateCopy = {}
+							for (const [address, accountStorage] of Object.entries(snapshot.state)) {
+								if (accountStorage && typeof accountStorage === 'object' && ('nonce' in accountStorage || 'balance' in accountStorage)) {
+									stateCopy[address] = {
+										nonce: accountStorage.nonce,
+										balance: accountStorage.balance,
+										storageRoot: accountStorage.storageRoot,
+										codeHash: accountStorage.codeHash,
+										...(accountStorage.deployedBytecode && { deployedBytecode: accountStorage.deployedBytecode }),
+										...(accountStorage.storage && {
+											storage: { ...accountStorage.storage },
+										}),
+									}
+								} else {
+									stateCopy[address] = accountStorage
+								}
+							}
+							return { stateRoot: snapshot.stateRoot, state: stateCopy }
+						})
+					),
 
-					getAllSnapshots: Ref.get(snapsRef),
+					// Return a defensive copy of all snapshots to prevent external mutation (#R139-P3-002 fix)
+					getAllSnapshots: Ref.get(snapsRef).pipe(
+						Effect.map((m) => {
+							/** @type {Map<Hex, Snapshot>} */
+							const copy = new Map()
+							for (const [id, snapshot] of m) {
+								/** @type {Record<string, any>} */
+								const stateCopy = {}
+								for (const [address, accountStorage] of Object.entries(snapshot.state)) {
+									if (accountStorage && typeof accountStorage === 'object' && ('nonce' in accountStorage || 'balance' in accountStorage)) {
+										stateCopy[address] = {
+											nonce: accountStorage.nonce,
+											balance: accountStorage.balance,
+											storageRoot: accountStorage.storageRoot,
+											codeHash: accountStorage.codeHash,
+											...(accountStorage.deployedBytecode && { deployedBytecode: accountStorage.deployedBytecode }),
+											...(accountStorage.storage && {
+												storage: { ...accountStorage.storage },
+											}),
+										}
+									} else {
+										stateCopy[address] = accountStorage
+									}
+								}
+								copy.set(id, { stateRoot: snapshot.stateRoot, state: stateCopy })
+							}
+							return copy
+						})
+					),
 
 					/**
 					 * Create a deep copy of the snapshot state.
@@ -271,17 +355,21 @@ export const SnapshotLive = () => {
 								/** @type {Record<string, any>} */
 								const newState = {}
 								for (const [address, accountStorage] of Object.entries(snapshot.state)) {
-									// Deep copy AccountStorage with bigint values preserved
-									newState[address] = {
-										nonce: accountStorage.nonce,
-										balance: accountStorage.balance,
-										storageRoot: accountStorage.storageRoot,
-										codeHash: accountStorage.codeHash,
-										...(accountStorage.deployedBytecode && { deployedBytecode: accountStorage.deployedBytecode }),
-										// Deep copy storage if present (StorageDump is { [slot]: value })
-										...(accountStorage.storage && {
-											storage: { ...accountStorage.storage },
-										}),
+									if (accountStorage && typeof accountStorage === 'object' && ('nonce' in accountStorage || 'balance' in accountStorage)) {
+										// Deep copy AccountStorage with bigint values preserved
+										newState[address] = {
+											nonce: accountStorage.nonce,
+											balance: accountStorage.balance,
+											storageRoot: accountStorage.storageRoot,
+											codeHash: accountStorage.codeHash,
+											...(accountStorage.deployedBytecode && { deployedBytecode: accountStorage.deployedBytecode }),
+											// Deep copy storage if present (StorageDump is { [slot]: value })
+											...(accountStorage.storage && {
+												storage: { ...accountStorage.storage },
+											}),
+										}
+									} else {
+										newState[address] = accountStorage
 									}
 								}
 								// Create new Snapshot with copied state

@@ -85,76 +85,79 @@ export type TevmTaggedErrorUnion =
 	| InvalidFilterTypeError
 	| NodeNotReadyError
 
-// Individual overloads - TypeScript matches in order, most specific first
-
-/** If already a TevmError, return as-is */
-export function toTaggedError(error: TevmError): TevmError
-/** Preserve InsufficientBalanceError type */
-export function toTaggedError(error: InsufficientBalanceError): InsufficientBalanceError
-/** Preserve InsufficientFundsError type */
-export function toTaggedError(error: InsufficientFundsError): InsufficientFundsError
-/** Preserve InvalidJumpError type */
-export function toTaggedError(error: InvalidJumpError): InvalidJumpError
-/** Preserve OutOfGasError type */
-export function toTaggedError(error: OutOfGasError): OutOfGasError
-/** Preserve RevertError type */
-export function toTaggedError(error: RevertError): RevertError
-/** Preserve InvalidOpcodeError type */
-export function toTaggedError(error: InvalidOpcodeError): InvalidOpcodeError
-/** Preserve StackOverflowError type */
-export function toTaggedError(error: StackOverflowError): StackOverflowError
-/** Preserve StackUnderflowError type */
-export function toTaggedError(error: StackUnderflowError): StackUnderflowError
-/** Preserve ForkError type */
-export function toTaggedError(error: ForkError): ForkError
-/** Preserve NetworkError type */
-export function toTaggedError(error: NetworkError): NetworkError
-/** Preserve TimeoutError type */
-export function toTaggedError(error: TimeoutError): TimeoutError
-/** Preserve BlockNotFoundError type */
-export function toTaggedError(error: BlockNotFoundError): BlockNotFoundError
-/** Preserve InvalidBlockError type */
-export function toTaggedError(error: InvalidBlockError): InvalidBlockError
-/** Preserve BlockGasLimitExceededError type */
-export function toTaggedError(error: BlockGasLimitExceededError): BlockGasLimitExceededError
-/** Preserve InvalidTransactionError type */
-export function toTaggedError(error: InvalidTransactionError): InvalidTransactionError
-/** Preserve NonceTooLowError type */
-export function toTaggedError(error: NonceTooLowError): NonceTooLowError
-/** Preserve NonceTooHighError type */
-export function toTaggedError(error: NonceTooHighError): NonceTooHighError
-/** Preserve GasTooLowError type */
-export function toTaggedError(error: GasTooLowError): GasTooLowError
-/** Preserve StateRootNotFoundError type */
-export function toTaggedError(error: StateRootNotFoundError): StateRootNotFoundError
-/** Preserve AccountNotFoundError type */
-export function toTaggedError(error: AccountNotFoundError): AccountNotFoundError
-/** Preserve StorageError type */
-export function toTaggedError(error: StorageError): StorageError
-/** Preserve InvalidRequestError type */
-export function toTaggedError(error: InvalidRequestError): InvalidRequestError
-/** Preserve MethodNotFoundError type */
-export function toTaggedError(error: MethodNotFoundError): MethodNotFoundError
-/** Preserve InvalidParamsError type */
-export function toTaggedError(error: InvalidParamsError): InvalidParamsError
-/** Preserve InternalError type */
-export function toTaggedError(error: InternalError): InternalError
-/** Preserve SnapshotNotFoundError type */
-export function toTaggedError(error: SnapshotNotFoundError): SnapshotNotFoundError
-/** Preserve FilterNotFoundError type */
-export function toTaggedError(error: FilterNotFoundError): FilterNotFoundError
-/** Preserve InvalidFilterTypeError type */
-export function toTaggedError(error: InvalidFilterTypeError): InvalidFilterTypeError
-/** Preserve NodeNotReadyError type */
-export function toTaggedError(error: NodeNotReadyError): NodeNotReadyError
-
 /**
- * Fallback: For unknown errors, return the full union type.
- * Use this when the input error type is not known at compile time.
+ * Type-safe function overloads for toTaggedError.
+ *
+ * This interface describes the overloaded function signatures that narrow
+ * the return type based on the input error type. TypeScript matches overloads
+ * in order, most specific first.
+ *
+ * Implementation is provided in toTaggedError.js
  */
-export function toTaggedError(error: BaseError | Error | unknown): TevmTaggedErrorUnion
-
-/**
- * Implementation signature (matches the JS implementation)
- */
-export function toTaggedError(error: unknown): TevmTaggedErrorUnion
+export interface toTaggedError {
+	/** If already a TevmError, return as-is */
+	(error: TevmError): TevmError
+	/** Preserve InsufficientBalanceError type */
+	(error: InsufficientBalanceError): InsufficientBalanceError
+	/** Preserve InsufficientFundsError type */
+	(error: InsufficientFundsError): InsufficientFundsError
+	/** Preserve InvalidJumpError type */
+	(error: InvalidJumpError): InvalidJumpError
+	/** Preserve OutOfGasError type */
+	(error: OutOfGasError): OutOfGasError
+	/** Preserve RevertError type */
+	(error: RevertError): RevertError
+	/** Preserve InvalidOpcodeError type */
+	(error: InvalidOpcodeError): InvalidOpcodeError
+	/** Preserve StackOverflowError type */
+	(error: StackOverflowError): StackOverflowError
+	/** Preserve StackUnderflowError type */
+	(error: StackUnderflowError): StackUnderflowError
+	/** Preserve ForkError type */
+	(error: ForkError): ForkError
+	/** Preserve NetworkError type */
+	(error: NetworkError): NetworkError
+	/** Preserve TimeoutError type */
+	(error: TimeoutError): TimeoutError
+	/** Preserve BlockNotFoundError type */
+	(error: BlockNotFoundError): BlockNotFoundError
+	/** Preserve InvalidBlockError type */
+	(error: InvalidBlockError): InvalidBlockError
+	/** Preserve BlockGasLimitExceededError type */
+	(error: BlockGasLimitExceededError): BlockGasLimitExceededError
+	/** Preserve InvalidTransactionError type */
+	(error: InvalidTransactionError): InvalidTransactionError
+	/** Preserve NonceTooLowError type */
+	(error: NonceTooLowError): NonceTooLowError
+	/** Preserve NonceTooHighError type */
+	(error: NonceTooHighError): NonceTooHighError
+	/** Preserve GasTooLowError type */
+	(error: GasTooLowError): GasTooLowError
+	/** Preserve StateRootNotFoundError type */
+	(error: StateRootNotFoundError): StateRootNotFoundError
+	/** Preserve AccountNotFoundError type */
+	(error: AccountNotFoundError): AccountNotFoundError
+	/** Preserve StorageError type */
+	(error: StorageError): StorageError
+	/** Preserve InvalidRequestError type */
+	(error: InvalidRequestError): InvalidRequestError
+	/** Preserve MethodNotFoundError type */
+	(error: MethodNotFoundError): MethodNotFoundError
+	/** Preserve InvalidParamsError type */
+	(error: InvalidParamsError): InvalidParamsError
+	/** Preserve InternalError type */
+	(error: InternalError): InternalError
+	/** Preserve SnapshotNotFoundError type */
+	(error: SnapshotNotFoundError): SnapshotNotFoundError
+	/** Preserve FilterNotFoundError type */
+	(error: FilterNotFoundError): FilterNotFoundError
+	/** Preserve InvalidFilterTypeError type */
+	(error: InvalidFilterTypeError): InvalidFilterTypeError
+	/** Preserve NodeNotReadyError type */
+	(error: NodeNotReadyError): NodeNotReadyError
+	/**
+	 * Fallback: For unknown errors, return the full union type.
+	 * Use this when the input error type is not known at compile time.
+	 */
+	(error: BaseError | Error | unknown): TevmTaggedErrorUnion
+}

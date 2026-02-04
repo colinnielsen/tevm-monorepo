@@ -192,7 +192,8 @@ describe('VmLive', () => {
 				const vmService = yield* VmService
 				yield* vmService.ready
 
-				const copy = vmService.shallowCopy()
+				// #R140-P2-004 fix: shallowCopy now returns an Effect for consistent error handling
+				const copy = yield* vmService.shallowCopy()
 				expect(copy).toBeDefined()
 				expect(copy.vm).toBeDefined()
 				// Shallow copy creates a new VM instance
@@ -211,7 +212,8 @@ describe('VmLive', () => {
 				const vmService = yield* VmService
 				yield* vmService.ready
 
-				const copy = vmService.shallowCopy()
+				// #R140-P2-004 fix: shallowCopy now returns an Effect
+				const copy = yield* vmService.shallowCopy()
 				yield* copy.ready
 
 				// The copy should have the same shape as the original

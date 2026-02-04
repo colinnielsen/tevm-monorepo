@@ -178,7 +178,8 @@ describe('BlockchainLocal', () => {
 			const program = Effect.gen(function* () {
 				const blockchain = yield* BlockchainService
 				yield* blockchain.ready
-				const copy = blockchain.shallowCopy()
+				// #R140-P2-001 fix: shallowCopy now returns an Effect for consistent error handling
+				const copy = yield* blockchain.shallowCopy()
 				expect(copy).toBeDefined()
 				expect(copy.chain).toBeDefined()
 				return 'shallow copied'

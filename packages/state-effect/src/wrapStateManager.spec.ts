@@ -227,14 +227,29 @@ describe('createStateManagerShape', () => {
 		expect((mockStateManager as any).deepCopy).toHaveBeenCalled()
 	})
 
-	it('should provide shallowCopy that returns a new shape', () => {
+	// #R140-P2-008 fix: shallowCopy now returns an Effect for consistent error handling
+	it('should provide shallowCopy that returns an Effect with a new shape', async () => {
 		const shape = createStateManagerShape(mockStateManager)
 
-		const copiedShape = shape.shallowCopy()
+		const copiedShape = await Effect.runPromise(shape.shallowCopy())
 
 		expect(copiedShape).toBeDefined()
 		expect(copiedShape.stateManager).not.toBe(mockStateManager)
 		expect((mockStateManager as any).shallowCopy).toHaveBeenCalled()
+	})
+
+	it('should handle shallowCopy errors', async () => {
+		const failingMock = {
+			...mockStateManager,
+			shallowCopy: vi.fn().mockImplementation(() => {
+				throw new Error('Shallow copy failed')
+			}),
+		} as unknown as import('@tevm/state').StateManager
+		const shape = createStateManagerShape(failingMock)
+
+		const exit = await Effect.runPromiseExit(shape.shallowCopy())
+
+		expect(Exit.isFailure(exit)).toBe(true)
 	})
 
 	describe('error handling', () => {

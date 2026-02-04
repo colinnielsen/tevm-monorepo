@@ -29,13 +29,17 @@ export type VmShape = {
      */
     buildBlock: (opts: import("@tevm/vm").BuildBlockOpts) => import("effect").Effect.Effect<Awaited<ReturnType<import("@tevm/vm").Vm["buildBlock"]>>, VmError>;
     /**
-     * - Effect that completes when VM is ready
+     * - Effect that completes when VM is ready. Has VmError error channel if initialization fails.
      */
-    ready: import("effect").Effect.Effect<void>;
+    ready: import("effect").Effect.Effect<void, VmError>;
     /**
-     * - Create a deep copy of the VM
+     * - Create a deep copy of the VM. Returns VmError if the operation fails.
      */
-    deepCopy: () => import("effect").Effect.Effect<VmShape>;
+    deepCopy: () => import("effect").Effect.Effect<VmShape, VmError>;
+    /**
+     * - Create a shallow copy of the VM. Shares the same stateManager, blockchain, and common with the original.
+     */
+    shallowCopy: () => VmShape;
 };
 /**
  * Configuration options for VmLive layer.
@@ -44,5 +48,5 @@ export type VmShape = {
  * using EvmLive({ profiler: true, loggingEnabled: true }). The VM layer wraps
  * an already-configured EVM from EvmService.
  */
-export type VmLiveOptions = {};
+export type VmLiveOptions = Object;
 //# sourceMappingURL=types.d.ts.map

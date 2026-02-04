@@ -248,7 +248,16 @@ export const BlockchainLive = (options = {}) => {
 							return createShape(copiedChain)
 						}),
 
-					shallowCopy: () => createShape(chainInstance.shallowCopy()),
+					// #R140-P2-001/#R140-P2-002 fix: Wrap shallowCopy in Effect.try for consistent error handling
+					shallowCopy: () =>
+						Effect.try({
+							try: () => createShape(chainInstance.shallowCopy()),
+							catch: (error) =>
+								new InvalidBlockError({
+									message: `Failed to create shallow copy of blockchain`,
+									cause: /** @type {Error} */ (error),
+								}),
+						}),
 
 					ready: Effect.tryPromise({
 						try: () => chainInstance.ready(),

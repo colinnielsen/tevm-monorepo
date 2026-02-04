@@ -221,8 +221,8 @@ describe('EvmLive', () => {
 		it('should create a shallow copy with shallowCopy', async () => {
 			const program = Effect.gen(function* () {
 				const evmService = yield* EvmService
-				// Create a shallow copy
-				const shallowCopiedService = evmService.shallowCopy()
+				// #R140-P2-007 fix: shallowCopy now returns an Effect for consistent error handling
+				const shallowCopiedService = yield* evmService.shallowCopy()
 				// Verify it has all the expected methods
 				expect(shallowCopiedService).toBeDefined()
 				expect(shallowCopiedService.evm).toBeDefined()
@@ -270,7 +270,8 @@ describe('EvmLive', () => {
 		it('should execute runCall on shallow copy', async () => {
 			const program = Effect.gen(function* () {
 				const evmService = yield* EvmService
-				const shallowCopiedService = evmService.shallowCopy()
+				// #R140-P2-007 fix: shallowCopy now returns an Effect
+				const shallowCopiedService = yield* evmService.shallowCopy()
 				// Execute a call on the shallow copy
 				const result = yield* shallowCopiedService.runCall({
 					gasLimit: 1000000n,
@@ -304,9 +305,10 @@ describe('EvmLive', () => {
 		it('should recursively create copies from copies', async () => {
 			const program = Effect.gen(function* () {
 				const evmService = yield* EvmService
+				// #R140-P2-007 fix: shallowCopy now returns an Effect
 				// Create a shallow copy, then create a shallow copy of that
-				const shallowCopy1 = evmService.shallowCopy()
-				const shallowCopy2 = shallowCopy1.shallowCopy()
+				const shallowCopy1 = yield* evmService.shallowCopy()
+				const shallowCopy2 = yield* shallowCopy1.shallowCopy()
 				expect(shallowCopy2).toBeDefined()
 				// Each shallow copy is a separate EVM instance
 				expect(shallowCopy2.evm).not.toBe(evmService.evm)

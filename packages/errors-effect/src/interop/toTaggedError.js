@@ -1,4 +1,15 @@
 import { TevmError } from '../TevmError.js'
+
+/**
+ * Validates that a value is a valid hex string (starts with '0x').
+ * Used to safely cast strings to `0x${string}` type.
+ * @param {unknown} value - The value to check
+ * @returns {value is `0x${string}`} True if value is a valid hex string
+ */
+const isValidHex = (value) => {
+	return typeof value === 'string' && value.startsWith('0x')
+}
+
 // EVM errors
 import { InsufficientBalanceError } from '../evm/InsufficientBalanceError.js'
 import { InsufficientFundsError } from '../evm/InsufficientFundsError.js'
@@ -155,7 +166,7 @@ export const toTaggedError = /** @type {import('./toTaggedError.types.js').toTag
 			// EVM errors
 			if (tag === 'InsufficientBalanceError') {
 				return new InsufficientBalanceError({
-					address: typeof baseError['address'] === 'string' ? /** @type {`0x${string}`} */ (baseError['address']) : undefined,
+					address: isValidHex(baseError['address']) ? baseError['address'] : undefined,
 					required: typeof baseError['required'] === 'bigint' ? baseError['required'] : undefined,
 					available: typeof baseError['available'] === 'bigint' ? baseError['available'] : undefined,
 					message: baseError['message'],
@@ -164,7 +175,7 @@ export const toTaggedError = /** @type {import('./toTaggedError.types.js').toTag
 			}
 			if (tag === 'InsufficientFundsError') {
 				return new InsufficientFundsError({
-					address: typeof baseError['address'] === 'string' ? /** @type {`0x${string}`} */ (baseError['address']) : undefined,
+					address: isValidHex(baseError['address']) ? baseError['address'] : undefined,
 					required: typeof baseError['required'] === 'bigint' ? baseError['required'] : undefined,
 					available: typeof baseError['available'] === 'bigint' ? baseError['available'] : undefined,
 					message: baseError['message'],
@@ -190,7 +201,7 @@ export const toTaggedError = /** @type {import('./toTaggedError.types.js').toTag
 			if (tag === 'RevertError' || tag === 'Revert') {
 				return new RevertError({
 					// Original @tevm/errors uses 'raw' property, Effect version also uses 'raw'
-					raw: typeof baseError['raw'] === 'string' ? /** @type {`0x${string}`} */ (baseError['raw']) : undefined,
+					raw: isValidHex(baseError['raw']) ? baseError['raw'] : undefined,
 					reason: typeof baseError['reason'] === 'string' ? baseError['reason'] : undefined,
 					message: baseError['message'],
 					cause: baseError['cause'],
@@ -254,7 +265,7 @@ export const toTaggedError = /** @type {import('./toTaggedError.types.js').toTag
 			if (tag === 'InvalidBlockError') {
 				return new InvalidBlockError({
 					blockNumber: typeof baseError['blockNumber'] === 'bigint' ? baseError['blockNumber'] : undefined,
-					blockHash: typeof baseError['blockHash'] === 'string' ? /** @type {`0x${string}`} */ (baseError['blockHash']) : undefined,
+					blockHash: isValidHex(baseError['blockHash']) ? baseError['blockHash'] : undefined,
 					reason: typeof baseError['reason'] === 'string' ? baseError['reason'] : undefined,
 					message: baseError['message'],
 					cause: baseError['cause'],
@@ -280,7 +291,7 @@ export const toTaggedError = /** @type {import('./toTaggedError.types.js').toTag
 			}
 			if (tag === 'NonceTooLowError') {
 				return new NonceTooLowError({
-					address: typeof baseError['address'] === 'string' ? /** @type {`0x${string}`} */ (baseError['address']) : undefined,
+					address: isValidHex(baseError['address']) ? baseError['address'] : undefined,
 					expected: typeof baseError['expected'] === 'bigint' ? baseError['expected'] : undefined,
 					actual: typeof baseError['actual'] === 'bigint' ? baseError['actual'] : undefined,
 					message: baseError['message'],
@@ -289,7 +300,7 @@ export const toTaggedError = /** @type {import('./toTaggedError.types.js').toTag
 			}
 			if (tag === 'NonceTooHighError') {
 				return new NonceTooHighError({
-					address: typeof baseError['address'] === 'string' ? /** @type {`0x${string}`} */ (baseError['address']) : undefined,
+					address: isValidHex(baseError['address']) ? baseError['address'] : undefined,
 					expected: typeof baseError['expected'] === 'bigint' ? baseError['expected'] : undefined,
 					actual: typeof baseError['actual'] === 'bigint' ? baseError['actual'] : undefined,
 					message: baseError['message'],
@@ -308,22 +319,22 @@ export const toTaggedError = /** @type {import('./toTaggedError.types.js').toTag
 			// State errors
 			if (tag === 'StateRootNotFoundError') {
 				return new StateRootNotFoundError({
-					stateRoot: typeof baseError['stateRoot'] === 'string' ? /** @type {`0x${string}`} */ (baseError['stateRoot']) : undefined,
+					stateRoot: isValidHex(baseError['stateRoot']) ? baseError['stateRoot'] : undefined,
 					message: baseError['message'],
 					cause: baseError['cause'],
 				})
 			}
 			if (tag === 'AccountNotFoundError' || tag === 'AccountNotFound') {
 				return new AccountNotFoundError({
-					address: typeof baseError['address'] === 'string' ? /** @type {`0x${string}`} */ (baseError['address']) : undefined,
+					address: isValidHex(baseError['address']) ? baseError['address'] : undefined,
 					message: baseError['message'],
 					cause: baseError['cause'],
 				})
 			}
 			if (tag === 'StorageError') {
 				return new StorageError({
-					address: typeof baseError['address'] === 'string' ? /** @type {`0x${string}`} */ (baseError['address']) : undefined,
-					key: typeof baseError['key'] === 'string' ? /** @type {`0x${string}`} */ (baseError['key']) : undefined,
+					address: isValidHex(baseError['address']) ? baseError['address'] : undefined,
+					key: isValidHex(baseError['key']) ? baseError['key'] : undefined,
 					message: baseError['message'],
 					cause: baseError['cause'],
 				})

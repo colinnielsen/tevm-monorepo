@@ -2,12 +2,196 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-04 (Post 137th Fix)
+**Last Updated**: 2026-02-04 (Post 140th Review)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
 
 ---
 
 ## Review Agent Summary (2026-02-04)
+
+**141st FIX (2026-02-04).** Fixed 1 CRITICAL and 7 HIGH priority issues from 140th review.
+
+**FIXED CRITICAL Issues (1 total):**
+- ✅ **#R140-P3-001**: FIXED - FilterLive.js:141,451 now uses correct field name `tx` instead of `pendingTransactions` for pending transaction filter access
+
+**FIXED HIGH Issues (7 total):**
+- ✅ **#R140-P2-001**: FIXED - createBlockchainShape.js shallowCopy now returns Effect.try() with matching type declaration
+- ✅ **#R140-P2-002**: FIXED - BlockchainLive.js:251, BlockchainLocal.js:204 now wrap shallowCopy in Effect.try consistently
+- ✅ **#R140-P2-004**: FIXED - VmLive.js:136-146 shallowCopy now wrapped in Effect.try with InvalidBlockError handling
+- ✅ **#R140-P2-007**: FIXED - EvmLive.js:156-164 shallowCopy now wrapped in Effect.try with proper error handling
+- ✅ **#R140-P2-008**: FIXED - StateManagerLive.js:328, wrapStateManager.js:250 shallowCopy now wrapped in Effect.try
+- ✅ **#R140-P3-002**: FIXED - FilterLive.js:147-148,456-457 now checks Array.isArray(topics) before calling .map()
+- ✅ **#R140-P4-001**: FIXED - EthActionsLive.js:374-384 estimateGas now includes EIP-2028 calldata gas costs (4 gas/zero byte, 16 gas/non-zero byte)
+
+---
+
+**140th REVIEW (2026-02-04).** Deep Parallel Opus 4.5 independent review with ultrathink (4 parallel subagents). Found 1 CRITICAL, 12 HIGH, 10 MEDIUM, 11 LOW = 34 NEW issues.
+
+**NEW CRITICAL Issues Found (1 total):**
+- ✅ **#R140-P3-001**: FIXED (141st) - FilterLive.js:141,451 - `get` and `getAllFilters` now use correct field name `tx`
+
+**NEW HIGH Issues Found (12 total):**
+- ✅ **#R140-P2-001**: FIXED (141st) - createBlockchainShape.js shallowCopy now returns Effect.try() with matching type
+- ✅ **#R140-P2-002**: FIXED (141st) - BlockchainLive.js, BlockchainLocal.js now wrap shallowCopy in Effect.try consistently
+- 🔴 **#R140-P2-003**: EvmLive.js:114-120 - Effect.sync used for precompile operations that can throw; addCustomPrecompile/removeCustomPrecompile errors become uncaught defects
+- ✅ **#R140-P2-004**: FIXED (141st) - VmLive.js shallowCopy now wrapped in Effect.try
+- ✅ **#R140-P2-007**: FIXED (141st) - EvmLive.js shallowCopy now wrapped in Effect.try
+- ✅ **#R140-P2-008**: FIXED (141st) - StateManagerLive.js, wrapStateManager.js shallowCopy now wrapped in Effect.try
+- ✅ **#R140-P3-002**: FIXED (141st) - FilterLive.js now checks Array.isArray(topics) before calling .map()
+- 🔴 **#R140-P3-005**: SetAccountLive.js:19-30,336-337 - hexToBytes padStart does NOT truncate; storage keys/values >32 bytes passed to stateManager unchanged
+- ✅ **#R140-P4-001**: FIXED (141st) - EthActionsLive.js estimateGas now includes EIP-2028 calldata gas costs
+- 🔴 **#R140-P4-003**: EthActionsLive.js:411-467,494-550 - block response missing baseFeePerGas, mixHash/prevRandao, withdrawals, blobGasUsed for post-merge/Shanghai/Cancun blocks
+- 🔴 **#R140-P4-004**: types.d.ts:92-121 - EthActionsShape missing 8 methods (estimateGas, getBlockByNumber/Hash, accounts, netVersion, web3ClientVersion, getTransactionCount, getLogs)
+- 🔴 **#R140-P4-006**: SendLive.js:167-171 - RevertError.raw field not included in JSON-RPC error response; clients cannot decode revert reason
+
+**NEW MEDIUM Issues Found (10 total):**
+- 🟡 **#R140-P1-002**: toBaseError.js:141 - baseKeys set missing 'stack' property; stack may duplicate in specificProps
+- 🟡 **#R140-P1-003**: effectToPromise.js:118 - error._tag access without verifying property exists; relies on lenient property access
+- 🟡 **#R140-P1-006**: toTaggedError.js:148-152 - instanceof checks fail across JavaScript realms; cross-realm TaggedErrors reconverted unnecessarily
+- 🟡 **#R140-P2-005**: StateManagerLive.js:23-28,wrapStateManager.js:33-38 - toEthjsAddress can throw for invalid addresses; mapped to wrong error types (AccountNotFoundError/StorageError)
+- 🟡 **#R140-P3-003**: SnapshotLive.js:216-217 - misleading comment claims ID guaranteed valid hex, but parseInt doesn't validate format
+- 🟡 **#R140-P3-004**: FilterLive.js:72, SnapshotLive.js:110 - counter IDs use JavaScript number; precision lost after 2^53-1
+- 🟡 **#R140-P3-007**: GetStorageAtLive.js:109-139,191 - storage position length not validated; oversized positions passed to stateManager
+- 🟡 **#R140-P4-002**: types.js:111-133 - JsonRpcBlock type missing baseFeePerGas, withdrawals, blobGasUsed, parentBeaconBlockRoot
+- 🟡 **#R140-P4-005**: types.d.ts:283-310 - TevmActionsShape missing snapshot/revert methods present in types.js
+- 🟡 **#R140-P4-008**: RequestLive.js:62-350 - missing eth_getTransactionByHash, eth_getTransactionReceipt, eth_sendRawTransaction, debug_traceCall
+
+**NEW LOW Issues Found (11 total):**
+- 🟢 **#R140-P1-001**: LoggerLive.js:58 - child logger shares no reference to parent state; independent instances (consistent with Pino but undocumented)
+- 🟢 **#R140-P1-004**: LoggerTest.js:173-174 - 'silent' level accepted but documented as "likely unintentional"; no runtime warning
+- 🟢 **#R140-P1-005**: wrapWithEffect.js:74 - empty methods array not validated; returns wrapped object with empty effect property
+- 🟢 **#R140-P1-007**: layerFromFactory.js:55 - returns Layer with `unknown` error type; forces consumers to use Effect.mapError
+- 🟢 **#R140-P1-008**: ForkError.js:131 - passes 'name' to super() unlike other error classes; inconsistent hashing/equality
+- 🟢 **#R140-P1-009**: toBaseError.js:7 - VERSION hardcoded as '1.0.0-next.148'; will become stale
+- 🟢 **#R140-P1-010**: LoggerLive.js:110 - name parameter not validated for empty string; creates logger with no name context
+- 🟢 **#R140-P2-006**: StateManagerLive.js:23-28, wrapStateManager.js:33-38 - duplicate toEthjsAddress implementation; DRY violation
+- 🟢 **#R140-P3-006**: SetAccountLive.js:88 - validateHex regex accepts `"0x"` (empty hex); semantically invalid for storageRoot
+- 🟢 **#R140-P4-007**: MemoryClientLive.js:56 - viem dynamic import not cached; repeated await overhead per address validation
+- 🟢 **#R140-P4-009**: types.js:254-259 - JsonRpcResponse.error type missing data field present in implementation
+
+**Open Issues Summary (Post 141st Fix):**
+- **CRITICAL**: 4 🔴 (5 previous - 1 FIXED in 141st)
+- **HIGH**: 30 🔴 (37 previous - 7 FIXED in 141st)
+- **MEDIUM**: 230 🟡 (unchanged)
+- **LOW**: 449 🟢 (unchanged)
+
+**Key 140th Review Findings (Updated Post 141st Fix):**
+1. ✅ **FIXED - Field Name Mismatch**: FilterLive now uses correct `tx` field name (#R140-P3-001)
+2. ✅ **FIXED - shallowCopy Pattern Issues**: All 6 files now wrap shallowCopy in Effect.try (#R140-P2-001/002/003/004/007/008)
+3. ✅ **FIXED - topics Array Type**: Filter now checks Array.isArray before .map() (#R140-P3-002)
+4. ✅ **FIXED - EIP-2028 Gas**: estimateGas now includes calldata gas costs (#R140-P4-001)
+5. **HIGH - Type Declaration Gaps**: EthActionsShape/TevmActionsShape missing methods in .d.ts (#R140-P4-004/005)
+6. **HIGH - Storage Validation**: hexToBytes padStart doesn't truncate; oversized storage values accepted (#R140-P3-005)
+
+---
+
+**139th REVIEW (2026-02-04).** Deep Parallel Opus 4.5 independent review with ultrathink (4 parallel subagents). Found 1 CRITICAL, 12 HIGH, 14 MEDIUM, 8 LOW = 35 NEW issues.
+
+**NEW CRITICAL Issues Found (1 total):**
+- 🔴 **#R139-P3-001**: SnapshotLive.js:148-155 - takeSnapshot stores state without deep copy; `state` object from `stateMgr.dumpState()` stored by reference, not value. Subsequent transactions can mutate snapshot state, causing `revertToSnapshot` to restore corrupted state.
+
+**NEW HIGH Issues Found (12 total):**
+- 🔴 **#R139-P1-001**: toTaggedError.js:166-175 - message extraction lacks type validation; `baseError['message']` passed directly without checking if string, can propagate undefined/non-string values
+- 🔴 **#R139-P1-002**: toBaseError.js:135 - `walk()` method uses wrong error object; traverses `error` instead of `result`, missing TEVM-specific properties (_tag, code, address, etc.)
+- 🔴 **#R139-P2-001**: ForkConfigFromRpc.d.ts:58 - declares `unknown` error type instead of `ForkError`; breaks type-safe `Effect.catchTag('ForkError', ...)`
+- 🔴 **#R139-P2-002**: HttpTransport.d.ts:1 - declares `never` error type but Layer can fail with ForkError; users cannot handle transport errors at type level
+- 🔴 **#R139-P2-003**: createBlockchainShape.js:147 - shallowCopy not wrapped in Effect error handling; if `chainInstance.shallowCopy()` throws, exception escapes Effect channel
+- 🔴 **#R139-P2-004**: createBlockchainShape.js:165-192 - iterator() returns AsyncIterable with errors escaping Effect channel; raw throws at line 185 for non-block-not-found errors
+- 🔴 **#R139-P3-002**: FilterLive.js:416 and SnapshotLive.js:251 - getAllFilters/getAllSnapshots return mutable Map references; external mutations corrupt internal state
+- 🔴 **#R139-P3-003**: FilterLive.js:130 and SnapshotLive.js:249 - get/getSnapshot return mutable object references; violates encapsulation, allows state corruption
+- 🔴 **#R139-P3-004**: FilterLive.js:89-121 - createLogFilter does not validate logsCriteria structure; address, topics (max 4 per EVM), fromBlock/toBlock not validated
+- 🔴 **#R139-P4-001**: MemoryClientLive.js:751 - deepCopy shares `eips` array reference between original and copy; mutations affect both, violating RFC 5.4 state isolation
+- 🔴 **#R139-P4-002**: TevmActionsLive.d.ts:33-35 - dependency count mismatch; JSDoc claims 4 dependencies but implementation requires 8 (missing EvmService, BlockchainService, CommonService, SnapshotService)
+- 🔴 **#R139-P4-003**: EthActionsLive.js:378-379 - estimateGas uses wrong intrinsic gas for contract creation; uses 21000n but should be 53000n (21000 base + 32000 CREATE per EIP-2)
+
+**NEW MEDIUM Issues Found (14 total):**
+- 🟡 **#R139-P1-003**: wrapWithEffect.js:94-99 - Edge case with promise-returning-promise; `catch: (error) => error` may have undefined behavior for sync Promise throws
+- 🟡 **#R139-P1-004**: promiseToEffect.js:81 - Documentation inconsistency with wrapWithEffect; behavior subtly differs despite similar claims
+- 🟡 **#R139-P1-005**: LoggerLive.js:58 - child() creates new Pino instance instead of using native Pino child(); loses parent bindings and performance optimizations
+- 🟡 **#R139-P1-006**: LoggerTest.js:46-54 - 'fatal' level captures nothing; no fatal() method but level accepted, unlike 'silent' this is undocumented
+- 🟡 **#R139-P1-007**: effectToPromise.js:120-127 - Enhanced error loses original stack trace; new Error points to catch handler, not failure location
+- 🟡 **#R139-P2-005**: CommonLocal.js:73 - CommonShape.copy() is synchronous and can throw outside Effect; violates Effect pattern
+- 🟡 **#R139-P2-006**: EvmLive.js:114-120 - Effect.sync used for precompile operations that could throw; addCustomPrecompile/removeCustomPrecompile should use Effect.try
+- 🟡 **#R139-P3-005**: types.js:116 (node-effect) - topics array allows >4 topics; EVM limits to 4 indexed topics, no validation enforced
+- 🟡 **#R139-P3-006**: GetAccountLive.js:209 - isEmpty calculation ignores codeHash comparison; may misclassify self-destructed contracts
+- 🟡 **#R139-P3-007**: SetAccountLive.js:176 - No validation for storageRoot length; must be exactly 32 bytes (64 hex chars)
+- 🟡 **#R139-P4-004**: MemoryClientLive.d.ts:47 - Type declaration loses all type information; uses `any` for all Layer type parameters
+- 🟡 **#R139-P4-005**: EthActionsLive.d.ts:41 - Type declaration degrades to 6 anonymous `Tag<any, any>` unions; TypeScript cannot verify layer composition
+- 🟡 **#R139-P4-006**: RequestLive.js:62-350 - Missing standard JSON-RPC network methods (net_listening, net_peerCount, eth_protocolVersion, eth_syncing, eth_mining, eth_hashrate)
+- 🟡 **#R139-P4-007**: types.js:51 (memory-client-effect) - deepCopy error channel declares `never` but can fail with InternalError
+
+**NEW LOW Issues Found (8 total):**
+- 🟢 **#R139-P1-008**: SnapshotNotFoundError.js:43-44 - snapshotId type redundant; `\`0x${string}\` | string | undefined` is confusing since `\`0x${string}\`` is subset of `string`
+- 🟢 **#R139-P1-009**: InvalidParamsError.js:52-53 - params field can serialize to huge JSON; no size limit or truncation for error logging
+- 🟢 **#R139-P1-010**: toTaggedError.js:258-264 - BlockNotFoundError blockTag cast without validation; unlike other fields, no typeof guards
+- 🟢 **#R139-P2-007**: VmShape.js:80 - Documentation uses non-existent `Effect.promise`; should be `Effect.tryPromise`
+- 🟢 **#R139-P3-008**: FilterLive.js:72 and SnapshotLive.js:110 - Counter overflow after 2^53-1 operations; use BigInt or reset periodically
+- 🟢 **#R139-P3-009**: types.js:115 (node-effect) - LogFilterParams.address should support array per JSON-RPC spec; current type only allows single address
+- 🟢 **#R139-P4-008**: EthActionsLive.js:337-347,395-405,478-488 - Duplicate bytesToHex helper defined 3 times in same file; extract to shared utility
+- 🟢 **#R139-P4-009**: EthActionsLive.js:408,495 - getBlockByNumber/Hash return type casting obscures missing post-merge fields; TypeScript won't flag missing fields
+
+**CORRECTION to Prior Reviews:**
+- ⚠️ **#R138-P4-001 (getSenderAddress crash)**: APPEARS FIXED - EthActionsLive.js:431-436,514-519 now has try-catch around getSenderAddress(); issue marked unfixed but code shows fix present
+
+**Open Issues Summary (Post 139th Review):**
+- **CRITICAL**: 4 🔴 (3 previous + 1 NEW)
+- **HIGH**: 25 🔴 (13 previous + 12 NEW)
+- **MEDIUM**: 220 🟡 (206 previous + 14 NEW)
+- **LOW**: 438 🟢 (430 previous + 8 NEW)
+
+**Key 139th Review Findings:**
+1. **CRITICAL - State Isolation**: SnapshotLive stores state by reference instead of deep copy, enabling silent snapshot corruption (#R139-P3-001)
+2. **HIGH - Mutable References Exposed**: FilterLive and SnapshotLive return mutable internal state (#R139-P3-002, #R139-P3-003)
+3. **HIGH - Type Declaration Degradation**: Multiple .d.ts files lose type safety with `any` types (#R139-P2-001, #R139-P2-002, #R139-P4-001, #R139-P4-002)
+4. **HIGH - Error Escape Routes**: iterator() and shallowCopy in createBlockchainShape.js throw raw errors outside Effect channel (#R139-P2-003, #R139-P2-004)
+5. **HIGH - Gas Estimation Bug**: Contract creation uses 21000n instead of 53000n intrinsic gas (#R139-P4-003)
+6. **Correction**: #R138-P4-001 (getSenderAddress crash) appears to have been fixed but not updated in tracking
+
+---
+
+**138th REVIEW (2026-02-04).** Deep Parallel Opus 4.5 independent review with ultrathink (4 parallel subagents). Found 3 CRITICAL, 7 HIGH, 8 MEDIUM, 2 LOW = 20 NEW issues.
+
+**NEW CRITICAL Issues Found (3 total):**
+- 🔴 **#R138-P1-001**: toTaggedError unsafe hex address type casting - casts strings to `0x${string}` without validating they start with "0x", affects 9+ error types (InsufficientBalanceError, InsufficientFundsError, NonceTooLowError, etc.)
+- 🔴 **#R138-P3-001**: Error channel type mismatches in 9 Live .d.ts files - all declare `Layer.Layer<any, never, any>` but implementations produce typed errors (InvalidParamsError, InternalError, StorageError, etc.)
+- 🔴 **#R138-P4-001**: getSenderAddress() called without try-catch in EthActionsLive.js:429,504 - unsigned/invalid transactions crash entire block response (previously #R136-P4-002, still unfixed)
+
+**NEW HIGH Issues Found (7 total):**
+- 🔴 **#R138-P1-002**: wrapWithEffect.js:94-99 - Effect.tryPromise catch handler uses `catch: (error) => error` which may not properly convert errors to Effect failures
+- 🔴 **#R138-P1-003**: LoggerService.d.ts uses `any` types for Pino logger (same as #R136-P1-003, still open)
+- 🔴 **#R138-P2-001**: VmLive.js:139-144 - shallowCopy calls `createVm()` synchronously without Effect.try wrapping
+- 🔴 **#R138-P2-002**: EvmLive.js:155-163 - shallowCopy calls `evmInstance.shallowCopy()` without error wrapping
+- 🔴 **#R138-P2-003**: BlockchainLive.js:251 - shallowCopy not wrapped in Effect error handling
+- 🔴 **#R138-P2-004**: StateManagerLive.js:328 and wrapStateManager.js:250 - two identical unprotected shallowCopy calls
+- 🔴 **#R138-P3-002**: GetStorageAtLive.js and SetAccountLive.js - storage keys/values >32 bytes not validated; hexToBytes padStart does NOT truncate oversized values
+
+**NEW MEDIUM Issues Found (8 total):**
+- 🟡 **#R138-P1-004**: effectToPromise.js:114-127 - incomplete service error detection relies on fragile string matching
+- 🟡 **#R138-P2-005**: HttpTransport.js:486-488 - unsafe Deferred type casting from `never` error to `ForkError`
+- 🟡 **#R138-P2-006**: HttpTransport.js:290 - return type annotation incorrect for batched mode error channel
+- 🟡 **#R138-P2-007**: EvmLive.js:67 - Layer return type error channel may not match actual mapEvmError output
+- 🟡 **#R138-P2-008**: StateManagerLive.js:92 - yields CommonService but never uses it (unclear dependency pattern)
+- 🟡 **#R138-P3-003**: SnapshotLive.js:45-61 - hexToBytes throws synchronous Error instead of Effect error
+- 🟡 **#R138-P4-002**: SendLive.js:163-172 - RevertError's `raw` field missing from JSON-RPC error response (same as #R136-P4-001, still unfixed)
+- 🟡 **#R138-P4-003**: EthActionsLive.js:408-456,483-531 - Block response missing baseFeePerGas and withdrawals (same as #R136-P4-003, still unfixed)
+
+**NEW LOW Issues Found (2 total):**
+- 🟢 **#R138-P1-005**: LoggerLive.js:43-47 - undefined data parameter not properly guarded before passing to Pino
+- 🟢 **#R138-P4-004**: EthActionsLive.js:248-382 - estimateGas doesn't account for calldata costs in intrinsic gas
+
+**Open Issues Summary (Post 138th Review):**
+- **CRITICAL**: 3 🔴 (3 NEW)
+- **HIGH**: 13 🔴 (6 previous + 7 NEW)
+- **MEDIUM**: 206 🟡 (198 previous + 8 NEW)
+- **LOW**: 430 🟢 (428 previous + 2 NEW)
+
+**Key 138th Review Findings:**
+1. **CRITICAL - Type Safety Violations**: Unsafe hex address casting in toTaggedError affects core error conversion
+2. **CRITICAL - Type Definitions**: 9 Live layer .d.ts files incorrectly declare `never` error channels
+3. **HIGH - shallowCopy Pattern**: All 4 Phase 2 packages have unprotected synchronous shallowCopy calls
+4. **Persistent Issues**: #R136-P4-001 (RevertError raw), #R136-P4-002 (getSenderAddress crash), #R136-P4-003 (missing block fields) remain unfixed after 3+ reviews
+
+---
 
 **137th FIX (2026-02-04).** Fixed 10 HIGH priority issues from 136th review.
 
@@ -17764,3 +17948,4 @@ const program = Effect.gen(function* () {
 | 0.31 | 2026-01-29 | Claude (Review Agent) | Thirty-first review with parallel researcher subagents - verified Phase 2, found 5 new issues in vm-effect and state-effect (VmError not exported, missing typed errors on state operations) |
 | 0.116 | 2026-01-30 | Claude | Fixed MEDIUM priority issues from 116th review: #272 (EvmLive Effect.tryPromise for createEvm), #297 (storage length validation), #298 (hexToBytes Effect.try wrapper), #285/#286 (FilterLive listener cleanup). Removed dead code (toEthjsAddressSafe) from StateManagerLocal/Live. All tests pass with 100% coverage. |
 | 0.120 | 2026-01-30 | Claude (Review Agent) | 120th review with Opus 4.5 parallel subagents - found 27 NEW issues (3 CRITICAL, 6 HIGH, 14 MEDIUM, 4 LOW). Key findings: Runtime<any> cast defeats type safety (#427), VmLive uses Effect.promise() not Effect.tryPromise() (#437), SetAccountLive uses catchAll instead of mapError (#444). Issues span all 4 phases. |
+| 0.139 | 2026-02-04 | Claude | Fixed 3 issues from 138th review: #R138-P1-001 CRITICAL (toTaggedError unsafe hex address type casting) - converted function declarations to interface pattern in toTaggedError.types.ts. #R138-P4-001 CRITICAL (getSenderAddress() try-catch in EthActionsLive.js) - wrapped getSenderAddress in Effect.try with proper error handling. #R138-P3-001 CRITICAL (Error channel type mismatches in Live .d.ts files) - investigated thoroughly: properly typing Service tags with `@type` annotations exposes that all Live implementations return `Effect<..., unknown, unknown>` but shapes expect typed errors like `InvalidParamsError | InternalError` - this is a systemic issue requiring comprehensive refactoring of all Live implementations to add explicit return type annotations and is beyond scope of quick fix. Added `/** @type {any} */` casts for EvmLive.js deepCopy calls. All type builds and tests pass (evm-effect 49 tests 100% coverage, errors-effect 100% coverage, actions-effect 109 tests 97.7% coverage). |

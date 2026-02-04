@@ -1,6 +1,7 @@
 export { StateManagerService } from "./StateManagerService.js";
 export { StateManagerLocal } from "./StateManagerLocal.js";
 export { StateManagerLive } from "./StateManagerLive.js";
+export { createStateManagerShape } from "./wrapStateManager.js";
 export type StateManagerShape = import("./types.js").StateManagerShape;
 export type StateManagerLocalOptions = import("./types.js").StateManagerLocalOptions;
 export type StateManagerLiveOptions = import("./types.js").StateManagerLiveOptions;

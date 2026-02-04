@@ -375,8 +375,20 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 					// executionGasUsed is the gas used by EVM execution (excluding base tx cost)
 					// Default to 0n when undefined since base cost is always added below
 					const executionGas = execResult?.executionGasUsed ?? 0n
-					// Add 21000 for base transaction cost (intrinsic gas)
-					const totalGas = executionGas + 21000n
+					// Contract creation uses 53000n intrinsic gas (21000 base + 32000 CREATE per EIP-2)
+					// Regular transactions use 21000n base transaction cost (#R139-P4-003 fix)
+					const isContractCreation = !params.to
+					const intrinsicGas = isContractCreation ? 53000n : 21000n
+
+					// #R140-P4-001 fix: Calculate calldata gas costs per EIP-2028
+					// 4 gas per zero byte, 16 gas per non-zero byte
+					let calldataGas = 0n
+					for (let i = 0; i < dataBytes.length; i++) {
+						// @ts-expect-error - dataBytes indexing may return undefined but we're in bounds
+						calldataGas += dataBytes[i] === 0 ? 4n : 16n
+					}
+
+					const totalGas = executionGas + intrinsicGas + calldataGas
 					// Add 10% buffer for estimation safety
 					return (totalGas * 110n) / 100n
 				}),
@@ -426,7 +438,15 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 						transactions: params.includeTransactions
 							? block.transactions.map((tx, txIndex) => {
 								const txJSON = tx.toJSON()
-								const from = tx.getSenderAddress ? tx.getSenderAddress().toString() : '0x0000000000000000000000000000000000000000'
+								// Wrap getSenderAddress in try-catch to handle unsigned/invalid transactions gracefully
+								let from = '0x0000000000000000000000000000000000000000'
+								if (tx.getSenderAddress) {
+									try {
+										from = tx.getSenderAddress().toString()
+									} catch {
+										// Transaction is unsigned or has invalid signature - use zero address
+									}
+								}
 								return /** @type {object} */ ({
 									blockHash: bytesToHex(block.hash()),
 									blockNumber: `0x${header.number.toString(16)}`,
@@ -501,7 +521,15 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 						transactions: params.includeTransactions
 							? block.transactions.map((tx, txIndex) => {
 								const txJSON = tx.toJSON()
-								const from = tx.getSenderAddress ? tx.getSenderAddress().toString() : '0x0000000000000000000000000000000000000000'
+								// Wrap getSenderAddress in try-catch to handle unsigned/invalid transactions gracefully
+								let from = '0x0000000000000000000000000000000000000000'
+								if (tx.getSenderAddress) {
+									try {
+										from = tx.getSenderAddress().toString()
+									} catch {
+										// Transaction is unsigned or has invalid signature - use zero address
+									}
+								}
 								return /** @type {object} */ ({
 									blockHash: bytesToHex(block.hash()),
 									blockNumber: `0x${header.number.toString(16)}`,

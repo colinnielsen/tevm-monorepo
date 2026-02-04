@@ -744,11 +744,12 @@ const createMemoryClientShape = (deps) => {
 
 				// Deep copy common to prevent shared mutable state (RFC §5.4)
 				// CommonShape has a copy() method that creates an independent copy
+				// CRITICAL FIX #R139-P4-001: Deep copy eips array to prevent reference sharing
 				const commonCopy = {
 					common: common.copy(),
 					chainId: common.chainId,
 					hardfork: common.hardfork,
-					eips: common.eips,
+					eips: [...common.eips], // Deep copy array to prevent shared reference (#R139-P4-001 fix)
 					// CRITICAL FIX: Bind copy to the new common, not the original
 					// Using arrow function to ensure copy() operates on commonCopy.common
 					copy: () => commonCopy.common.copy(),

@@ -127,7 +127,35 @@ export const FilterLive = () => {
 
 					createPendingTransactionFilter: () => createFilter('PendingTransaction'),
 
-					get: (/** @type {Hex} */ id) => Ref.get(fltrRef).pipe(Effect.map((m) => m.get(id))),
+					// Return a defensive copy of filter to prevent external mutation (#R139-P3-003 fix)
+					get: (/** @type {Hex} */ id) => Ref.get(fltrRef).pipe(
+						Effect.map((m) => {
+							const filter = m.get(id)
+							if (!filter) return undefined
+							// Create shallow copy with deep copied mutable arrays
+							// Use safe defaults for arrays that might not exist in mock/test filters
+							// #R140-P3-001 fix: Use 'tx' field (not 'pendingTransactions') per Filter type definition
+							return {
+								...filter,
+								logs: Array.isArray(filter.logs) ? [...filter.logs] : [],
+								blocks: Array.isArray(filter.blocks) ? [...filter.blocks] : [],
+								tx: Array.isArray(filter.tx) ? [...filter.tx] : [],
+								registeredListeners: Array.isArray(filter.registeredListeners) ? [...filter.registeredListeners] : [],
+								// Deep copy logsCriteria if present
+								// #R140-P3-002 fix: Check Array.isArray before calling .map() since topics can be Hex string
+								...(filter.logsCriteria && {
+									logsCriteria: {
+										...filter.logsCriteria,
+										...(filter.logsCriteria.topics && {
+											topics: Array.isArray(filter.logsCriteria.topics)
+												? filter.logsCriteria.topics.map(t => Array.isArray(t) ? [...t] : t)
+												: filter.logsCriteria.topics,
+										}),
+									},
+								}),
+							}
+						})
+					),
 
 					remove: (/** @type {Hex} */ id) =>
 						Effect.gen(function* () {
@@ -413,7 +441,36 @@ export const FilterLive = () => {
 							}
 						}),
 
-					getAllFilters: Ref.get(fltrRef),
+					// Return a defensive copy of all filters to prevent external mutation (#R139-P3-002 fix)
+					getAllFilters: Ref.get(fltrRef).pipe(
+						Effect.map((m) => {
+							/** @type {Map<Hex, Filter>} */
+							const copy = new Map()
+							for (const [id, filter] of m) {
+								// Create defensive copy of each filter with safe array defaults
+								// #R140-P3-001 fix: Use 'tx' field (not 'pendingTransactions') per Filter type definition
+								copy.set(id, {
+									...filter,
+									logs: Array.isArray(filter.logs) ? [...filter.logs] : [],
+									blocks: Array.isArray(filter.blocks) ? [...filter.blocks] : [],
+									tx: Array.isArray(filter.tx) ? [...filter.tx] : [],
+									registeredListeners: Array.isArray(filter.registeredListeners) ? [...filter.registeredListeners] : [],
+									// #R140-P3-002 fix: Check Array.isArray before calling .map() since topics can be Hex string
+									...(filter.logsCriteria && {
+										logsCriteria: {
+											...filter.logsCriteria,
+											...(filter.logsCriteria.topics && {
+												topics: Array.isArray(filter.logsCriteria.topics)
+													? filter.logsCriteria.topics.map(t => Array.isArray(t) ? [...t] : t)
+													: filter.logsCriteria.topics,
+											}),
+										},
+									}),
+								})
+							}
+							return copy
+						})
+					),
 
 					cleanupExpiredFilters: (/** @type {number | undefined} */ expirationMs) =>
 						Effect.gen(function* () {

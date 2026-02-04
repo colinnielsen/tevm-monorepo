@@ -38,6 +38,14 @@ export type EvmShape = {
      * - Remove a custom precompile
      */
     removeCustomPrecompile: (precompile: import("@tevm/evm").CustomPrecompile) => import("effect").Effect.Effect<void>;
+    /**
+     * - Create a deep copy of the EVM with copied stateManager and blockchain
+     */
+    deepCopy: () => import("effect").Effect.Effect<EvmShape, EvmError>;
+    /**
+     * - Create a shallow copy of the EVM (shares underlying state with original)
+     */
+    shallowCopy: () => EvmShape;
 };
 /**
  * Configuration options for EvmLive layer

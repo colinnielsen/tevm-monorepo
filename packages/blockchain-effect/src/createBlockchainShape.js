@@ -144,7 +144,16 @@ export const createBlockchainShape = (chainInstance) => {
 				return createBlockchainShape(copiedChain)
 			}),
 
-		shallowCopy: () => createBlockchainShape(chainInstance.shallowCopy()),
+		// Wrap shallowCopy in Effect.try to prevent errors from escaping Effect channel (#R139-P2-003 fix)
+	shallowCopy: () =>
+		Effect.try({
+			try: () => createBlockchainShape(chainInstance.shallowCopy()),
+			catch: (error) =>
+				new InvalidBlockError({
+					message: `Failed to create shallow copy of blockchain`,
+					cause: /** @type {Error} */ (error),
+				}),
+		}),
 
 		ready: Effect.tryPromise({
 			try: () => chainInstance.ready(),
@@ -158,6 +167,8 @@ export const createBlockchainShape = (chainInstance) => {
 		/**
 		 * Iterate through blocks in a range from start to end (inclusive).
 		 * Yields blocks that exist in the specified range.
+		 * NOTE: This returns a raw AsyncIterable for compatibility with existing APIs.
+		 * Errors are thrown as InvalidBlockError to maintain type consistency (#R139-P2-004 fix).
 		 * @param {bigint} start - Starting block number (inclusive)
 		 * @param {bigint} end - Ending block number (inclusive)
 		 * @returns {AsyncIterable<import('@tevm/block').Block>}
@@ -175,6 +186,7 @@ export const createBlockchainShape = (chainInstance) => {
 						} catch (error) {
 							// Only silently continue for block-not-found errors
 							// Re-throw all other errors (network errors, validation errors, etc.)
+							// wrapped as InvalidBlockError for type consistency (#R139-P2-004 fix)
 							const isBlockNotFound =
 								error instanceof Error &&
 								(error.name === 'UnknownBlock' ||
@@ -182,7 +194,11 @@ export const createBlockchainShape = (chainInstance) => {
 									error.message?.toLowerCase().includes('block not found') ||
 									error.message?.toLowerCase().includes('unknown block'))
 							if (!isBlockNotFound) {
-								throw error
+								// Wrap non-block-not-found errors in typed error (#R139-P2-004 fix)
+								throw new InvalidBlockError({
+									message: `Failed to iterate blocks: ${error instanceof Error ? error.message : String(error)}`,
+									cause: /** @type {Error} */ (error),
+								})
 							}
 							// Block not found at this height, continue to next
 						}
