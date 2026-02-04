@@ -453,7 +453,8 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 									from: /** @type {`0x${string}`} */ (from),
 									gas: /** @type {`0x${string}`} */ (txJSON.gasLimit ?? '0x0'),
 									gasPrice: /** @type {`0x${string}`} */ (txJSON.gasPrice ?? txJSON.maxFeePerGas ?? '0x0'),
-									hash: tx.hash ? bytesToHex(tx.hash()) : '0x',
+									// #R146-P4-002 fix: Return null for missing tx hash (not '0x' which is invalid per JSON-RPC spec)
+									hash: tx.hash ? bytesToHex(tx.hash()) : null,
 									input: /** @type {`0x${string}`} */ (txJSON.data ?? '0x'),
 									nonce: /** @type {`0x${string}`} */ (txJSON.nonce ?? '0x0'),
 									to: txJSON.to ? /** @type {`0x${string}`} */ (String(txJSON.to)) : null,
@@ -463,7 +464,8 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 									v: txJSON.v ?? '0x0',
 									r: txJSON.r ?? '0x0',
 									s: txJSON.s ?? '0x0',
-									...(txJSON.chainId !== undefined ? { chainId: /** @type {`0x${string}`} */ (String(txJSON.chainId)) } : {}),
+									// #R146-P4-001 fix: Convert chainId to hex (not decimal string) per JSON-RPC spec
+									...(txJSON.chainId !== undefined ? { chainId: /** @type {`0x${string}`} */ (`0x${BigInt(txJSON.chainId).toString(16)}`) } : {}),
 									...(txJSON.accessList !== undefined ? { accessList: txJSON.accessList } : {}),
 									...(txJSON.maxFeePerGas !== undefined ? { maxFeePerGas: /** @type {`0x${string}`} */ (txJSON.maxFeePerGas) } : {}),
 									...(txJSON.maxPriorityFeePerGas !== undefined ? { maxPriorityFeePerGas: /** @type {`0x${string}`} */ (txJSON.maxPriorityFeePerGas) } : {}),
@@ -471,7 +473,8 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 									...(txJSON.blobVersionedHashes !== undefined ? { blobVersionedHashes: txJSON.blobVersionedHashes } : {}),
 								})
 							})
-							: block.transactions.map((tx) => tx.hash ? bytesToHex(tx.hash()) : '0x'),
+							// #R146-P4-002 fix: Return null for missing tx hash (not '0x' which is invalid per JSON-RPC spec)
+							: block.transactions.map((tx) => tx.hash ? bytesToHex(tx.hash()) : null),
 						uncles: block.uncleHeaders?.map((uncle) => bytesToHex(uncle.hash())) ?? [],
 					})
 				}),
@@ -536,7 +539,8 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 									from: /** @type {`0x${string}`} */ (from),
 									gas: /** @type {`0x${string}`} */ (txJSON.gasLimit ?? '0x0'),
 									gasPrice: /** @type {`0x${string}`} */ (txJSON.gasPrice ?? txJSON.maxFeePerGas ?? '0x0'),
-									hash: tx.hash ? bytesToHex(tx.hash()) : '0x',
+									// #R146-P4-002 fix: Return null for missing tx hash (not '0x' which is invalid per JSON-RPC spec)
+									hash: tx.hash ? bytesToHex(tx.hash()) : null,
 									input: /** @type {`0x${string}`} */ (txJSON.data ?? '0x'),
 									nonce: /** @type {`0x${string}`} */ (txJSON.nonce ?? '0x0'),
 									to: txJSON.to ? /** @type {`0x${string}`} */ (String(txJSON.to)) : null,
@@ -546,7 +550,8 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 									v: txJSON.v ?? '0x0',
 									r: txJSON.r ?? '0x0',
 									s: txJSON.s ?? '0x0',
-									...(txJSON.chainId !== undefined ? { chainId: /** @type {`0x${string}`} */ (String(txJSON.chainId)) } : {}),
+									// #R146-P4-001 fix: Convert chainId to hex (not decimal string) per JSON-RPC spec
+									...(txJSON.chainId !== undefined ? { chainId: /** @type {`0x${string}`} */ (`0x${BigInt(txJSON.chainId).toString(16)}`) } : {}),
 									...(txJSON.accessList !== undefined ? { accessList: txJSON.accessList } : {}),
 									...(txJSON.maxFeePerGas !== undefined ? { maxFeePerGas: /** @type {`0x${string}`} */ (txJSON.maxFeePerGas) } : {}),
 									...(txJSON.maxPriorityFeePerGas !== undefined ? { maxPriorityFeePerGas: /** @type {`0x${string}`} */ (txJSON.maxPriorityFeePerGas) } : {}),
@@ -554,7 +559,8 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 									...(txJSON.blobVersionedHashes !== undefined ? { blobVersionedHashes: txJSON.blobVersionedHashes } : {}),
 								})
 							})
-							: block.transactions.map((tx) => tx.hash ? bytesToHex(tx.hash()) : '0x'),
+							// #R146-P4-002 fix: Return null for missing tx hash (not '0x' which is invalid per JSON-RPC spec)
+							: block.transactions.map((tx) => tx.hash ? bytesToHex(tx.hash()) : null),
 						uncles: block.uncleHeaders?.map((uncle) => bytesToHex(uncle.hash())) ?? [],
 					})
 				}),

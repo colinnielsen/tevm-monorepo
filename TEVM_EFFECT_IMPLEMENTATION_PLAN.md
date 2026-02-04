@@ -2,8 +2,60 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-04 (Post 145th Fix)
+**Last Updated**: 2026-02-04 (Post 147th Fix)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
+
+---
+
+**146th REVIEW (2026-02-04).** Deep Parallel Opus 4.5 independent review with ultrathink (4 parallel subagents). Found 0 CRITICAL, 5 HIGH, 10 MEDIUM, 10 LOW = 25 NEW issues.
+
+**NEW CRITICAL Issues Found (0 total):**
+(None found in this review)
+
+**NEW HIGH Issues Found (5 total):**
+- ✅ **#R146-P1-001**: FIXED (147th) - logAllErrors.js now has type guards to prevent infinite loop when cause is non-error value
+- ⚠️ **#R146-P1-002**: VERIFIED OK (147th) - toBaseError.js walk() function is correct; it uses `err.cause` not `error` - false positive
+- ✅ **#R146-P3-001**: FIXED (147th) - SetAccountLive.js now validates storageRoot length <= 32 bytes (64 hex chars)
+- ✅ **#R146-P4-001**: FIXED (147th) - EthActionsLive.js chainId now uses hex format (`0x${BigInt(chainId).toString(16)}`)
+- ✅ **#R146-P4-002**: FIXED (147th) - EthActionsLive.js empty tx hash now returns null instead of invalid '0x'
+
+**NEW MEDIUM Issues Found (10 total):**
+- 🟡 **#R146-P1-003**: toTaggedError.js:260 - Missing message type validation. BlockNotFoundError conversion accepts any value for message; non-string messages cause runtime error in Error constructor.
+- 🟡 **#R146-P1-004**: Multiple error classes - Redundant name property handling. Some errors pass name to super() AND set this.name; redundant assignment with potential for inconsistency.
+- 🟡 **#R146-P1-005**: SnapshotNotFoundError.js, FilterNotFoundError.js - Inconsistent hex validation for snapshotId/filterId. Some validate with regex, others accept any string; should use consistent `isHex()` validation.
+- 🟡 **#R146-P3-002**: GetStorageAtLive.js:45-60 - Inconsistent empty hex validation. Accepts `'0x'` for position but some downstream functions reject it; should normalize to `'0x0'` or reject consistently.
+- 🟡 **#R146-P3-003**: SnapshotLive.js:148-160 - Potential race condition in takeSnapshot. Multiple concurrent takeSnapshot calls may interleave counter increment and state capture, creating snapshots with wrong IDs.
+- 🟡 **#R146-P3-004**: FilterLive.js:180-220 - Shallow copy of nested block/tx structures. Block and transaction objects copied shallowly; header/transaction nested objects still shared.
+- 🟡 **#R146-P4-003**: InvalidOpcodeError.js:43 - Hardcodes opcode: 0. Error always reports opcode as 0 regardless of actual invalid opcode; loses diagnostic information.
+- 🟡 **#R146-P4-004**: EthActionsLive.js:411-440 - Block response missing mixHash field. Post-merge blocks should include mixHash (prevRandao); omission breaks some clients.
+- 🟡 **#R146-P4-005**: EthActionsLive.js:411-440 - Missing withdrawals/withdrawalsRoot fields. Shanghai+ blocks require these fields; responses incomplete for post-Shanghai state.
+- 🟡 **#R146-P4-006**: MemoryClientLive.js:890 - dispose() is a no-op. Method exists but performs no actual cleanup; resources (event listeners, subscriptions) not released.
+
+**NEW LOW Issues Found (10 total):**
+- 🟢 **#R146-P1-006**: toBaseError.js:180-195 - Error message truncation inconsistent. Long messages truncated in some paths but not others; maximum length not documented.
+- 🟢 **#R146-P1-007**: LoggerLive.js:78 - Logger child() doesn't preserve custom context. Child loggers lose parent's custom context fields; should merge contexts.
+- 🟢 **#R146-P1-008**: effectToPromise.js:45 - Runtime.runPromise options ignored. Second parameter to runPromise not passed through; signal/scheduler options lost.
+- 🟢 **#R146-P1-009**: wrapWithEffect.js:120 - Method binding loses thisArg. Wrapped methods don't preserve `this` context from original object; arrow functions work but regular functions break.
+- 🟢 **#R146-P2-001**: EvmLive.js:114 - Effect.sync used for property access that can't throw. Simple property getter wrapped unnecessarily; Effect.succeed more appropriate.
+- 🟢 **#R146-P3-005**: MiningLive.js:88-95 - Block timestamp can exceed Number.MAX_SAFE_INTEGER. Uses Date.now() in milliseconds without BigInt; precision loss after year 275760.
+- 🟢 **#R146-P3-006**: CallLive.js:234 - Redundant gas limit check. Gas limit validated twice: once in validateParams and again before execution.
+- 🟢 **#R146-P3-007**: GetAccountLive.js:67 - Missing JSDoc for return type. Function returns complex object but JSDoc only describes parameters.
+- 🟢 **#R146-P4-007**: TevmActionsLive.js:89-110 - Inconsistent null vs undefined for optional fields. Some fields use null, others undefined; should follow consistent convention.
+- 🟢 **#R146-P4-008**: EthActionsLive.js:580 - Undocumented mine() behavior for 0 blocks. Calling mine(0) silently succeeds; should either mine 1 block or throw error.
+
+**Open Issues Summary (Post 147th Fix):**
+- **CRITICAL**: 4 🔴 (unchanged)
+- **HIGH**: 32 🔴 (36 previous - 4 FIXED in 147th)
+- **MEDIUM**: 270 🟡 (unchanged)
+- **LOW**: 489 🟢 (unchanged)
+
+**Key 146th Review Findings (Updated Post 147th Fix):**
+1. ✅ **FIXED - Infinite Loop Risk**: logAllErrors now has type guards for error chain traversal (#R146-P1-001)
+2. ⚠️ **VERIFIED OK**: toBaseError walk() was false positive - code is correct (#R146-P1-002)
+3. ✅ **FIXED - State Corruption**: SetAccountLive now validates storageRoot length (#R146-P3-001)
+4. ✅ **FIXED - JSON-RPC Non-compliance**: chainId now hex, empty tx hash now null (#R146-P4-001/002)
+5. **MEDIUM - Missing Block Fields**: Post-merge/Shanghai block responses incomplete (#R146-P4-004/005)
+6. **MEDIUM - Race Condition**: Concurrent snapshots may get wrong IDs (#R146-P3-003)
 
 ---
 
@@ -71,6 +123,23 @@
 4. **MEDIUM - JSON-RPC Compliance**: Missing baseFeePerGas, yParity, totalDifficulty handling (#R144-P4-001/002/013)
 5. **MEDIUM - Resource Management**: EVM/VM resources not using Effect.acquireRelease pattern (#R144-P2-006)
 6. **Pattern Issue**: Inconsistent deep copy behavior across Filter/Snapshot methods (#R144-P3-005/006)
+
+---
+
+**147th FIX (2026-02-04).** Fixed 4 HIGH priority issues from 146th review.
+
+**FIXED HIGH Issues (4 total):**
+- ✅ **#R146-P1-001**: FIXED - logAllErrors.js now includes type guards to prevent infinite loop when error.cause is a non-error value (primitive, circular reference). The while loop now checks `typeof current === 'object'` and `typeof current.cause === 'object'` before traversing.
+- ⚠️ **#R146-P1-002**: VERIFIED OK - toBaseError.js walk() function was a false positive. The code correctly uses `err.cause` (the parameter) not `error` (outer variable). No fix needed.
+- ✅ **#R146-P3-001**: FIXED - SetAccountLive.js now validates storageRoot length before processing. Storage roots exceeding 32 bytes (64 hex chars) return InvalidParamsError with descriptive message.
+- ✅ **#R146-P4-001**: FIXED - EthActionsLive.js chainId field in transaction responses now uses proper hex encoding via `\`0x${BigInt(txJSON.chainId).toString(16)}\`` instead of decimal string.
+- ✅ **#R146-P4-002**: FIXED - EthActionsLive.js empty transaction hash now returns `null` instead of invalid `'0x'` string. This matches JSON-RPC spec which expects null or valid 32-byte hash.
+
+**Open Issues Summary (Post 147th Fix):**
+- **CRITICAL**: 4 🔴 (unchanged)
+- **HIGH**: 32 🔴 (36 previous - 4 FIXED in 147th)
+- **MEDIUM**: 270 🟡 (unchanged)
+- **LOW**: 489 🟢 (unchanged)
 
 ---
 

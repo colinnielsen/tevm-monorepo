@@ -175,6 +175,20 @@ export const SetAccountLive = Layer.effect(
 					const deployedBytecode = yield* validateHex(params.deployedBytecode, 'deployedBytecode')
 					const storageRoot = yield* validateHex(params.storageRoot, 'storageRoot')
 
+					// #R146-P3-001 fix: Validate storageRoot length (must be exactly 32 bytes = 64 hex chars)
+					if (storageRoot !== undefined) {
+						const storageRootHexChars = storageRoot.slice(2).length
+						if (storageRootHexChars > 64) {
+							return yield* Effect.fail(
+								new InvalidParamsError({
+									method: 'tevm_setAccount',
+									params: { storageRoot },
+									message: `storageRoot exceeds 32 bytes: ${storageRoot} (${storageRootHexChars / 2} bytes). EVM storage roots must be exactly 32 bytes.`,
+								}),
+							)
+						}
+					}
+
 					// Validate state/stateDiff mutual exclusivity
 					if (params.state !== undefined && params.stateDiff !== undefined) {
 						return yield* Effect.fail(
