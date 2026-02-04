@@ -2,8 +2,91 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-04 (Post 143rd Fix)
+**Last Updated**: 2026-02-04 (Post 145th Fix)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
+
+---
+
+**144th REVIEW (2026-02-04).** Deep Parallel Opus 4.5 independent review with ultrathink (4 parallel subagents). Found 0 CRITICAL, 5 HIGH, 16 MEDIUM, 19 LOW = 40 NEW issues.
+
+**NEW CRITICAL Issues Found (0 total):**
+(None found in this review)
+
+**NEW HIGH Issues Found (5 total):**
+- ✅ **#R144-P2-001**: FIXED (145th) - BlockchainService.js, StateManagerService.js now have proper type assertions for Context.GenericTag
+- ✅ **#R144-P3-001**: FIXED (145th) - FilterLive.js addLog/addBlock/addPendingTransaction now deep copy objects before storing
+- ✅ **#R144-P3-002**: FIXED (145th) - GetStorageAtLive.js now validates position length <= 32 bytes
+- ✅ **#R144-P3-003**: FIXED (145th) - SetAccountLive.js now validates storage key/value lengths <= 32 bytes
+- 🔴 **#R144-P4-004**: RequestLive.js:62-350 - getLogs is a stub returning empty array. The `eth_getLogs` JSON-RPC method is not implemented; always returns `[]` regardless of filter criteria.
+
+**NEW MEDIUM Issues Found (16 total):**
+- 🟡 **#R144-P1-001**: toBaseError.js:7 - VERSION hardcoded as '1.0.0-next.148'. Will become stale as package version changes; should be dynamically imported.
+- 🟡 **#R144-P1-002**: layerFromFactory.js:57-62 - error type lost as `unknown`. Factory errors not preserved in Layer error channel; consumers must use Effect.mapError to recover type information.
+- 🟡 **#R144-P1-003**: wrapWithEffect.js:76-95 - return type loses type safety. Wrapped methods return `Effect<unknown, unknown, unknown>` instead of preserving specific types from source object.
+- 🟡 **#R144-P2-002**: createBlockchainShape.js:165-192 - iterator() returns AsyncIterable outside Effect. Errors thrown during iteration escape the Effect error channel; cannot be caught with Effect.catchTag.
+- 🟡 **#R144-P2-003**: Multiple files - Effect.runPromise boundary can lose error type information. When Effects are run at service boundaries, typed errors become untyped Promise rejections.
+- 🟡 **#R144-P2-005**: StateManagerShape.getAccount - returns confusing error type. Type signature shows union of multiple errors but implementation only throws subset.
+- 🟡 **#R144-P2-006**: EvmLive.js, VmLive.js - Missing Scope/acquireRelease for EVM and VM resources. RFC specifies resource management pattern but implementation doesn't use Effect.acquireRelease for cleanup.
+- 🟡 **#R144-P3-004**: ImpersonationLive.js:74 - setImpersonatedAccount doesn't validate address format. Invalid addresses (wrong length, missing 0x prefix, non-hex characters) can be stored without error.
+- 🟡 **#R144-P3-005**: FilterLive.js:453-457, FilterLive.js:138-143 - Inconsistent deep copy behavior. getChanges performs deep copy but getAllFilters returns shallow copies; inconsistent mutation protection.
+- 🟡 **#R144-P3-006**: SnapshotLive.js:148-244 - State deep copy logic duplicated 4 times. Same deep copy pattern for account/storage state repeated in takeSnapshot, revertToSnapshot, getAllSnapshots, and deepCopy methods.
+- 🟡 **#R144-P4-001**: EthActionsLive.js:411-467 - Missing baseFeePerGas field in block response. Post-London (EIP-1559) blocks must include baseFeePerGas but response omits it.
+- 🟡 **#R144-P4-002**: EthActionsLive.js:438-472 - Transaction responses missing yParity field. Typed transactions (EIP-2930, EIP-1559) require yParity per JSON-RPC spec but only include v/r/s.
+- 🟡 **#R144-P4-003**: EthActionsLive.js:603 - getTransactionCount only supports 'latest' blockTag. Other block tags (pending, earliest, block number) ignored; always queries latest state.
+- 🟡 **#R144-P4-005**: SendLive.js:167-171 - RevertError raw data not in JSON-RPC response. The `data` field with encoded revert reason not included; clients cannot decode custom revert messages.
+- 🟡 **#R144-P4-006**: RequestLive.js:62-350 - Missing common JSON-RPC methods. eth_getTransactionByHash, eth_getTransactionReceipt, eth_feeHistory, eth_maxPriorityFeePerGas not implemented.
+- 🟡 **#R144-P4-013**: EthActionsLive.js:424 - totalDifficulty hardcoded to 0x0. Post-merge blocks should omit totalDifficulty entirely per EIP-3675; returning 0x0 may confuse clients.
+
+**NEW LOW Issues Found (19 total):**
+- 🟢 **#R144-P1-004**: effectToPromise.js:118 - no validation for Effect type. Function accepts any value; non-Effect input produces cryptic runtime errors.
+- 🟢 **#R144-P1-005**: toBaseError.js:106-135 - Stack trace lost in toBaseError conversion. Original error's stack replaced with conversion location stack.
+- 🟢 **#R144-P1-006**: LoggerTest.js:178 - returns TestLoggerShape but typed as LoggerShape. Type widening loses test-specific methods (getCapturedLogs, clearLogs).
+- 🟢 **#R144-P1-007**: createManagedRuntime.js - unnecessary wrapper. Simply calls Effect.ManagedRuntime.make with no additional logic; could be inlined.
+- 🟢 **#R144-P1-008**: SnapshotNotFoundError.js:43-44 - snapshotId type check inconsistent. Accepts `\`0x${string}\` | string | undefined` but `\`0x${string}\`` is already subset of `string`.
+- 🟢 **#R144-P1-009**: Multiple error classes - Default message shows "undefined" for missing properties. Error messages template in undefined values instead of fallback strings.
+- 🟢 **#R144-P1-010**: LoggerLive.js:110 - return type annotation issue. LoggerLive factory claims to return Layer but actually returns Effect that produces Layer.
+- 🟢 **#R144-P2-004**: VmLive.js:136-146 - deepCopy indentation/formatting inconsistent. Nested function formatting doesn't match codebase style conventions.
+- 🟢 **#R144-P2-007**: CommonLocal.js:73 - creates Common then immediately copies it. Unnecessary object creation; could construct copy directly.
+- 🟢 **#R144-P2-008**: EvmLive.js:156-164 - deepCopy copies Common but not consistently. Some paths copy Common, others share reference.
+- 🟢 **#R144-P3-007**: SetAccountLive.js:88 - Storage key/value validation regex allows empty values. `"0x"` passes validation but is semantically invalid for storage values.
+- 🟢 **#R144-P3-008**: FilterLive.js:559 - Redundant assignment in deepCopy for logsCriteria. Variable assigned then immediately reassigned in same scope.
+- 🟢 **#R144-P4-007**: EthActionsLive.js:340-380 - Gas estimation missing access list/blob gas costs. EIP-2930 access list gas and EIP-4844 blob gas not included in estimates.
+- 🟢 **#R144-P4-008**: TevmActionsLive.js:122-140 - Zero address fallback for unsigned tx sender. Uses address(0) for transactions without `from`; should validate or require sender.
+- 🟢 **#R144-P4-009**: EthActionsLive.js:398-399 - getBlockByNumber swallows all errors. catchAll converts all failures to `null` response; cannot distinguish "not found" from other errors.
+- 🟢 **#R144-P4-010**: MemoryClientLive.js:751 - Potential common config staleness in deepCopy. Common config copied at deepCopy time may miss subsequent chain parameter updates.
+- 🟢 **#R144-P4-011**: EthActionsLive.js:580-600 - Undocumented 1000 block limit in mine(). Hardcoded limit not in JSDoc or error message; silent truncation if exceeded.
+- 🟢 **#R144-P4-012**: types.d.ts:92-133 - Error types incomplete in type definitions. Effect error channels in .d.ts files don't match actual thrown errors in implementations.
+- 🟢 **#R144-P4-014**: MemoryClientLive.js:890-920 - Fire-and-forget disposal error logging. Resource disposal errors logged but not propagated; silent failures in cleanup.
+
+**Open Issues Summary (Post 144th Review):**
+- **CRITICAL**: 4 🔴 (unchanged)
+- **HIGH**: 35 🔴 (30 previous + 5 NEW)
+- **MEDIUM**: 260 🟡 (244 previous + 16 NEW)
+- **LOW**: 479 🟢 (460 previous + 19 NEW)
+
+**Key 144th Review Findings (Updated Post 145th Fix):**
+1. ✅ **FIXED - Type Information Loss**: Phase 2 services now have proper type generics on Context.GenericTag (#R144-P2-001)
+2. ✅ **FIXED - Input Validation Gaps**: FilterLive now deep copies objects (#R144-P3-001), storage position/value length now validated (#R144-P3-002/003)
+3. **HIGH - Stub Implementation**: eth_getLogs returns empty array always (#R144-P4-004)
+4. **MEDIUM - JSON-RPC Compliance**: Missing baseFeePerGas, yParity, totalDifficulty handling (#R144-P4-001/002/013)
+5. **MEDIUM - Resource Management**: EVM/VM resources not using Effect.acquireRelease pattern (#R144-P2-006)
+6. **Pattern Issue**: Inconsistent deep copy behavior across Filter/Snapshot methods (#R144-P3-005/006)
+
+---
+
+**145th FIX (2026-02-04).** Fixed 4 HIGH priority issues from 144th review.
+
+**FIXED HIGH Issues (4 total):**
+- ✅ **#R144-P2-001**: FIXED - BlockchainService.js and StateManagerService.js now include `ServiceId` typedef and proper type assertion `Context.Tag<ServiceId, ServiceShape>` for Context.GenericTag (EvmService and VmService already had correct type assertions)
+- ✅ **#R144-P3-001**: FIXED - FilterLive.js addLog/addBlock/addPendingTransaction now deep copy objects before storing to prevent external mutation after adding
+- ✅ **#R144-P3-002**: FIXED - GetStorageAtLive.js validatePosition now validates position length <= 32 bytes (64 hex chars) and returns InvalidParamsError for oversized positions
+- ✅ **#R144-P3-003**: FIXED - SetAccountLive.js storage loop now validates both key and value lengths <= 32 bytes (64 hex chars) and returns InvalidParamsError for oversized storage entries
+
+**Open Issues Summary (Post 145th Fix):**
+- **CRITICAL**: 4 🔴 (unchanged)
+- **HIGH**: 31 🔴 (35 previous - 4 FIXED in 145th)
+- **MEDIUM**: 260 🟡 (unchanged)
+- **LOW**: 479 🟢 (unchanged)
 
 ---
 

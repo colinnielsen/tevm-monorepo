@@ -10,6 +10,11 @@ import { Context } from 'effect'
  */
 
 /**
+ * BlockchainService identifier type for Effect Context.Tag
+ * @typedef {{ readonly _tag: '@tevm/blockchain-effect/BlockchainService' }} BlockchainServiceId
+ */
+
+/**
  * The BlockchainService Context.Tag for Effect.ts dependency injection.
  *
  * This service provides a type-safe interface for blockchain operations including
@@ -72,7 +77,8 @@ import { Context } from 'effect'
  * Effect.runPromise(program.pipe(Effect.provide(blockchainLayer)))
  * ```
  *
+ * @type {Context.Tag<BlockchainServiceId, BlockchainShape>}
  */
-export const BlockchainService = Context.GenericTag(
-	'@tevm/blockchain-effect/BlockchainService',
+export const BlockchainService = /** @type {Context.Tag<BlockchainServiceId, BlockchainShape>} */ (
+	Context.GenericTag('@tevm/blockchain-effect/BlockchainService')
 )

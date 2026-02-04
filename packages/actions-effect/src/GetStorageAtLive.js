@@ -135,6 +135,18 @@ const validatePosition = (position, method = 'eth_getStorageAt') =>
 				}),
 			)
 		}
+		// Storage positions must be <= 32 bytes (64 hex characters after 0x prefix)
+		// Fix for #R144-P3-002: validate position length to prevent undefined behavior
+		const hexChars = position.slice(2).length
+		if (hexChars > 64) {
+			return yield* Effect.fail(
+				new InvalidParamsError({
+					method,
+					params: { position },
+					message: `Storage position exceeds 32 bytes: ${position} (${hexChars / 2} bytes). EVM storage positions must be <= 32 bytes.`,
+				}),
+			)
+		}
 		return /** @type {`0x${string}`} */ (position.toLowerCase())
 	})
 

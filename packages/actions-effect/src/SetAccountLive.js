@@ -314,6 +314,17 @@ export const SetAccountLive = Layer.effect(
 										}),
 									)
 								}
+								// Fix for #R144-P3-003: Validate storage key length (<= 32 bytes = 64 hex chars)
+								const keyHexChars = key.slice(2).length
+								if (keyHexChars > 64) {
+									return yield* Effect.fail(
+										new InvalidParamsError({
+											method: 'tevm_setAccount',
+											params: { storageKey: key },
+											message: `Storage key exceeds 32 bytes: ${key} (${keyHexChars / 2} bytes). EVM storage keys must be <= 32 bytes.`,
+										}),
+									)
+								}
 								// Validate storage value hex format
 								if (typeof value !== 'string' || !value.startsWith('0x')) {
 									return yield* Effect.fail(
@@ -330,6 +341,17 @@ export const SetAccountLive = Layer.effect(
 											method: 'tevm_setAccount',
 											params: { storageKey: key, storageValue: value },
 											message: `Invalid storage value for key ${key}: ${value}. Contains invalid hex characters`,
+										}),
+									)
+								}
+								// Fix for #R144-P3-003: Validate storage value length (<= 32 bytes = 64 hex chars)
+								const valueHexChars = value.slice(2).length
+								if (valueHexChars > 64) {
+									return yield* Effect.fail(
+										new InvalidParamsError({
+											method: 'tevm_setAccount',
+											params: { storageKey: key, storageValue: value },
+											message: `Storage value exceeds 32 bytes for key ${key}: ${value} (${valueHexChars / 2} bytes). EVM storage values must be <= 32 bytes.`,
 										}),
 									)
 								}

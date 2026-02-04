@@ -10,6 +10,11 @@ import { Context } from 'effect'
  */
 
 /**
+ * StateManagerService identifier type for Effect Context.Tag
+ * @typedef {{ readonly _tag: '@tevm/state-effect/StateManagerService' }} StateManagerServiceId
+ */
+
+/**
  * StateManagerService Context Tag for Effect-based dependency injection.
  *
  * This tag is used to inject the StateManagerShape into Effect computations,
@@ -52,7 +57,8 @@ import { Context } from 'effect'
  * Effect.runPromise(program.pipe(Effect.provide(layer)))
  * ```
  *
+ * @type {Context.Tag<StateManagerServiceId, StateManagerShape>}
  */
-export const StateManagerService = Context.GenericTag(
-	'@tevm/state-effect/StateManagerService'
+export const StateManagerService = /** @type {Context.Tag<StateManagerServiceId, StateManagerShape>} */ (
+	Context.GenericTag('@tevm/state-effect/StateManagerService')
 )

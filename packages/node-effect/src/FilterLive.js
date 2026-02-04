@@ -350,7 +350,9 @@ export const FilterLive = () => {
 									return /** @type {const} */ ([{ found: true, wrongType: true }, map])
 								}
 								const newMap = new Map(map)
-								newMap.set(id, { ...filter, logs: [...filter.logs, log] })
+								// #R144-P3-001 fix: Deep copy log to prevent external mutation after adding
+								const logCopy = { ...log, topics: [...log.topics] }
+								newMap.set(id, { ...filter, logs: [...filter.logs, logCopy] })
 								return /** @type {const} */ ([{ found: true, wrongType: false }, newMap])
 							})
 
@@ -390,7 +392,11 @@ export const FilterLive = () => {
 									return /** @type {const} */ ([{ found: true, wrongType: true }, map])
 								}
 								const newMap = new Map(map)
-								newMap.set(id, { ...filter, blocks: [...filter.blocks, block] })
+								// #R144-P3-001 fix: Deep copy block to prevent external mutation after adding
+								const blockCopy = block !== null && typeof block === 'object'
+									? { .../** @type {object} */ (block) }
+									: block
+								newMap.set(id, { ...filter, blocks: [...filter.blocks, blockCopy] })
 								return /** @type {const} */ ([{ found: true, wrongType: false }, newMap])
 							})
 
@@ -430,7 +436,11 @@ export const FilterLive = () => {
 									return /** @type {const} */ ([{ found: true, wrongType: true }, map])
 								}
 								const newMap = new Map(map)
-								newMap.set(id, { ...filter, tx: [...filter.tx, tx] })
+								// #R144-P3-001 fix: Deep copy tx to prevent external mutation after adding
+								const txCopy = tx !== null && typeof tx === 'object'
+									? { .../** @type {object} */ (tx) }
+									: tx
+								newMap.set(id, { ...filter, tx: [...filter.tx, txCopy] })
 								return /** @type {const} */ ([{ found: true, wrongType: false }, newMap])
 							})
 
