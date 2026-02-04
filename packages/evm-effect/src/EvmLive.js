@@ -134,7 +134,7 @@ export const EvmLive = (options = {}) => {
 							const evmCopy = yield* Effect.tryPromise({
 								try: () =>
 									createEvm({
-										common: commonShape.common,
+										common: commonShape.common.copy(), // Deep copy Common to avoid shared mutable state (#R130-P2-004)
 										stateManager: stateManagerCopy,
 										blockchain: blockchainCopy,
 										allowUnlimitedContractSize: evmInstance.allowUnlimitedContractSize ?? false,

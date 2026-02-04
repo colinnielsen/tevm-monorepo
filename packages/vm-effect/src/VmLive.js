@@ -132,6 +132,18 @@ export const VmLive = (_options = {}) => {
 						})
 							return createShape(copiedVm)
 						}),
+
+					shallowCopy: () => {
+						// shallowCopy creates a new VM sharing the same stateManager, blockchain, common, and evm
+						// Note: the shallow copy shares the same stateManager, blockchain, and common (shared mutable state)
+						const vmCopy = createVm({
+							common: vmInstance.common,
+							stateManager: vmInstance.stateManager,
+							blockchain: vmInstance.blockchain,
+							evm: /** @type {import('@tevm/vm').CreateVmOptions['evm']} */ (vmInstance.evm),
+						})
+						return createShape(vmCopy)
+					},
 				}
 				return shape
 			}

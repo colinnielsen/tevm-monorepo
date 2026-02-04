@@ -60,6 +60,7 @@ import { TransportService } from './TransportService.js'
  * )
  * ```
  *
+ * @returns {Layer.Layer<typeof ForkConfigService, ForkError, TransportService>} A Layer providing ForkConfigService that may fail with ForkError during RPC calls or parsing
  */
 export const ForkConfigFromRpc = Layer.effect(
 	ForkConfigService,

@@ -174,7 +174,7 @@ export const TevmActionsLive = /** @type {Layer.Layer<import('./TevmActionsServi
 						rawData: bytesToHex(execResult.returnValue ?? new Uint8Array()),
 						executionGasUsed: execResult.executionGasUsed ?? 0n,
 						gas: execResult.gas ?? 0n,
-						createdAddress: result.createdAddress?.toString(),
+						createdAddress: result.createdAddress ? /** @type {import('./types.js').Hex} */ (bytesToHex(result.createdAddress.bytes)) : undefined,
 						exceptionError: execResult.exceptionError?.error,
 					}
 				}),

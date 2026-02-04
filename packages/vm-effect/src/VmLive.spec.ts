@@ -186,6 +186,48 @@ describe('VmLive', () => {
 			const result = await Effect.runPromise(program.pipe(Effect.provide(fullLayer)))
 			expect(result).toBe('deep copy works')
 		})
+
+		it('should create a shallow copy of the VM', async () => {
+			const program = Effect.gen(function* () {
+				const vmService = yield* VmService
+				yield* vmService.ready
+
+				const copy = vmService.shallowCopy()
+				expect(copy).toBeDefined()
+				expect(copy.vm).toBeDefined()
+				// Shallow copy creates a new VM instance
+				expect(copy.vm).not.toBe(vmService.vm)
+				// But shares the same stateManager (shallow copy semantics)
+				expect(copy.vm.stateManager).toBe(vmService.vm.stateManager)
+				return 'shallow copied'
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(fullLayer)))
+			expect(result).toBe('shallow copied')
+		})
+
+		it('should allow executing shallow copied VM operations', async () => {
+			const program = Effect.gen(function* () {
+				const vmService = yield* VmService
+				yield* vmService.ready
+
+				const copy = vmService.shallowCopy()
+				yield* copy.ready
+
+				// The copy should have the same shape as the original
+				expect(copy.vm).toBeDefined()
+				expect(typeof copy.runTx).toBe('function')
+				expect(typeof copy.runBlock).toBe('function')
+				expect(typeof copy.buildBlock).toBe('function')
+				expect(typeof copy.shallowCopy).toBe('function')
+				expect(typeof copy.deepCopy).toBe('function')
+
+				return 'shallow copy works'
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(fullLayer)))
+			expect(result).toBe('shallow copy works')
+		})
 	})
 
 	describe('exports', () => {
@@ -289,6 +331,171 @@ describe('VmLive', () => {
 			} finally {
 				mockCreateVm.mockRestore()
 			}
+		})
+
+		it('should capture runTx errors in the typed error channel', async () => {
+			// Build the layer stack
+			const stateLayer = Layer.provide(StateManagerLocal(), CommonLocal)
+			const blockchainLayer = Layer.provide(BlockchainLocal(), CommonLocal)
+			const evmLayer = Layer.provide(
+				EvmLive(),
+				Layer.mergeAll(stateLayer, blockchainLayer, CommonLocal),
+			)
+			const fullLayer = Layer.provide(
+				VmLive(),
+				Layer.mergeAll(evmLayer, stateLayer, blockchainLayer, CommonLocal),
+			)
+
+			const program = Effect.gen(function* () {
+				const vmService = yield* VmService
+				yield* vmService.ready
+
+				// Mock runTx to throw after getting the service
+				const originalRunTx = vmService.vm.runTx
+				vmService.vm.runTx = () => Promise.reject(new Error('runTx failed'))
+
+				try {
+					// This should fail and be captured in the error channel
+					const result = yield* vmService.runTx({} as any)
+					return result
+				} finally {
+					vmService.vm.runTx = originalRunTx
+				}
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(fullLayer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+		})
+
+		it('should capture runBlock errors in the typed error channel', async () => {
+			// Build the layer stack
+			const stateLayer = Layer.provide(StateManagerLocal(), CommonLocal)
+			const blockchainLayer = Layer.provide(BlockchainLocal(), CommonLocal)
+			const evmLayer = Layer.provide(
+				EvmLive(),
+				Layer.mergeAll(stateLayer, blockchainLayer, CommonLocal),
+			)
+			const fullLayer = Layer.provide(
+				VmLive(),
+				Layer.mergeAll(evmLayer, stateLayer, blockchainLayer, CommonLocal),
+			)
+
+			const program = Effect.gen(function* () {
+				const vmService = yield* VmService
+				yield* vmService.ready
+
+				// Mock runBlock to throw after getting the service
+				const originalRunBlock = vmService.vm.runBlock
+				vmService.vm.runBlock = () => Promise.reject(new Error('runBlock failed'))
+
+				try {
+					const result = yield* vmService.runBlock({} as any)
+					return result
+				} finally {
+					vmService.vm.runBlock = originalRunBlock
+				}
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(fullLayer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+		})
+
+		it('should capture buildBlock errors in the typed error channel', async () => {
+			// Build the layer stack
+			const stateLayer = Layer.provide(StateManagerLocal(), CommonLocal)
+			const blockchainLayer = Layer.provide(BlockchainLocal(), CommonLocal)
+			const evmLayer = Layer.provide(
+				EvmLive(),
+				Layer.mergeAll(stateLayer, blockchainLayer, CommonLocal),
+			)
+			const fullLayer = Layer.provide(
+				VmLive(),
+				Layer.mergeAll(evmLayer, stateLayer, blockchainLayer, CommonLocal),
+			)
+
+			const program = Effect.gen(function* () {
+				const vmService = yield* VmService
+				yield* vmService.ready
+
+				// Mock buildBlock to throw after getting the service
+				const originalBuildBlock = vmService.vm.buildBlock
+				vmService.vm.buildBlock = () => Promise.reject(new Error('buildBlock failed'))
+
+				try {
+					const result = yield* vmService.buildBlock({} as any)
+					return result
+				} finally {
+					vmService.vm.buildBlock = originalBuildBlock
+				}
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(fullLayer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+		})
+
+		it('should capture ready errors in the typed error channel', async () => {
+			// Build the layer stack
+			const stateLayer = Layer.provide(StateManagerLocal(), CommonLocal)
+			const blockchainLayer = Layer.provide(BlockchainLocal(), CommonLocal)
+			const evmLayer = Layer.provide(
+				EvmLive(),
+				Layer.mergeAll(stateLayer, blockchainLayer, CommonLocal),
+			)
+			const fullLayer = Layer.provide(
+				VmLive(),
+				Layer.mergeAll(evmLayer, stateLayer, blockchainLayer, CommonLocal),
+			)
+
+			const program = Effect.gen(function* () {
+				const vmService = yield* VmService
+
+				// Mock ready to throw after getting the service
+				const originalReady = vmService.vm.ready
+				vmService.vm.ready = () => Promise.reject(new Error('ready failed'))
+
+				try {
+					yield* vmService.ready
+					return 'should not reach'
+				} finally {
+					vmService.vm.ready = originalReady
+				}
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(fullLayer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+		})
+
+		it('should capture deepCopy errors in the typed error channel', async () => {
+			// Build the layer stack
+			const stateLayer = Layer.provide(StateManagerLocal(), CommonLocal)
+			const blockchainLayer = Layer.provide(BlockchainLocal(), CommonLocal)
+			const evmLayer = Layer.provide(
+				EvmLive(),
+				Layer.mergeAll(stateLayer, blockchainLayer, CommonLocal),
+			)
+			const fullLayer = Layer.provide(
+				VmLive(),
+				Layer.mergeAll(evmLayer, stateLayer, blockchainLayer, CommonLocal),
+			)
+
+			const program = Effect.gen(function* () {
+				const vmService = yield* VmService
+				yield* vmService.ready
+
+				// Mock deepCopy to throw after getting the service
+				const originalDeepCopy = vmService.vm.deepCopy
+				vmService.vm.deepCopy = () => Promise.reject(new Error('deepCopy failed'))
+
+				try {
+					const result = yield* vmService.deepCopy()
+					return result
+				} finally {
+					vmService.vm.deepCopy = originalDeepCopy
+				}
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(fullLayer)))
+			expect(Exit.isFailure(exit)).toBe(true)
 		})
 	})
 })
