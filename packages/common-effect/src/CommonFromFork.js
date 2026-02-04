@@ -1,6 +1,7 @@
 import { Effect, Layer } from 'effect'
 import { createCommon, tevmDefault } from '@tevm/common'
 import { ForkConfigService } from '@tevm/transport-effect'
+import { InternalError } from '@tevm/errors-effect'
 import { CommonService } from './CommonService.js'
 
 /**
@@ -64,7 +65,7 @@ import { CommonService } from './CommonService.js'
  * ```
  *
  * @param {CommonFromForkOptions} [options] - Configuration options
- * @returns {Layer.Layer<CommonService, never, ForkConfigService>} Layer providing CommonService
+ * @returns {Layer.Layer<CommonService, InternalError, ForkConfigService>} Layer providing CommonService
  */
 export const CommonFromFork = (options = {}) => {
 	const hardfork = options.hardfork ?? 'prague'
@@ -76,13 +77,24 @@ export const CommonFromFork = (options = {}) => {
 		Effect.gen(function* () {
 			const forkConfig = yield* ForkConfigService
 
-			const common = createCommon({
-				...tevmDefault,
-				id: Number(forkConfig.chainId),
-				hardfork,
-				eips: /** @type {number[]} */ ([...eips]),
-				...(loggingLevel !== 'silent' && { loggingLevel }),
-			}).copy() // Always copy to avoid mutation issues
+			// Wrap createCommon in Effect.try to capture synchronous exceptions
+			// (e.g., invalid hardfork name) in the Effect error channel
+			const common = yield* Effect.try({
+				try: () =>
+					createCommon({
+						...tevmDefault,
+						id: Number(forkConfig.chainId),
+						hardfork,
+						eips: /** @type {number[]} */ ([...eips]),
+						...(loggingLevel !== 'silent' && { loggingLevel }),
+					}).copy(), // Always copy to avoid mutation issues
+				catch: (error) =>
+					new InternalError({
+						// v8 ignore next - defensive branch for non-Error exceptions
+						message: `Failed to create Common configuration: ${error instanceof Error ? error.message : /* v8 ignore next */ String(error)}`,
+						cause: error,
+					}),
+			})
 
 			return /** @type {CommonShape} */ ({
 				common,

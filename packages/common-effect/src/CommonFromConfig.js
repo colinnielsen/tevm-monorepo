@@ -1,5 +1,6 @@
-import { Layer } from 'effect'
+import { Effect, Layer } from 'effect'
 import { createCommon, tevmDefault } from '@tevm/common'
+import { InternalError } from '@tevm/errors-effect'
 import { CommonService } from './CommonService.js'
 
 /**
@@ -67,7 +68,7 @@ import { CommonService } from './CommonService.js'
  * ```
  *
  * @param {CommonConfigOptions} [config] - Configuration options
- * @returns {Layer.Layer<CommonService, never, never>} Layer providing CommonService with no dependencies
+ * @returns {Layer.Layer<CommonService, InternalError, never>} Layer providing CommonService with no dependencies
  */
 export const CommonFromConfig = (config = {}) => {
 	const chainId = config.chainId ?? 900 // tevm-devnet default
@@ -75,23 +76,36 @@ export const CommonFromConfig = (config = {}) => {
 	const eips = config.eips ?? []
 	const loggingLevel = config.loggingLevel ?? 'warn'
 
-	const common = createCommon({
-		...tevmDefault,
-		id: chainId,
-		hardfork,
-		eips: /** @type {number[]} */ ([...eips]),
-		...(loggingLevel !== 'silent' && { loggingLevel }),
-		...(config.customCrypto && { customCrypto: config.customCrypto }),
-	}).copy() // Always copy to avoid mutation issues
-
-	return Layer.succeed(
+	return Layer.effect(
 		CommonService,
-		/** @type {CommonShape} */ ({
-			common,
-			chainId,
-			hardfork,
-			eips: common.ethjsCommon.eips(),
-			copy: () => common.copy(),
+		Effect.gen(function* () {
+			// Wrap createCommon in Effect.try to capture synchronous exceptions
+			// (e.g., invalid hardfork name) in the Effect error channel
+			const common = yield* Effect.try({
+				try: () =>
+					createCommon({
+						...tevmDefault,
+						id: chainId,
+						hardfork,
+						eips: /** @type {number[]} */ ([...eips]),
+						...(loggingLevel !== 'silent' && { loggingLevel }),
+						...(config.customCrypto && { customCrypto: config.customCrypto }),
+					}).copy(), // Always copy to avoid mutation issues
+				catch: (error) =>
+					new InternalError({
+						// v8 ignore next - defensive branch for non-Error exceptions
+						message: `Failed to create Common configuration: ${error instanceof Error ? error.message : /* v8 ignore next */ String(error)}`,
+						cause: error,
+					}),
+			})
+
+			return /** @type {CommonShape} */ ({
+				common,
+				chainId,
+				hardfork,
+				eips: common.ethjsCommon.eips(),
+				copy: () => common.copy(),
+			})
 		}),
 	)
 }

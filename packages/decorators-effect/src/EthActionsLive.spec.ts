@@ -1184,6 +1184,128 @@ describe('EthActionsLive', () => {
 		})
 	})
 
+	describe('getTransactionCount and getLogs', () => {
+		it('should return transaction count (nonce) for an address', async () => {
+			const vmMock = createMockVm()
+			const evmMock = createMockEvmService()
+			const commonMock = createMockCommon()
+			const stateManagerMock = createMockStateManager()
+			stateManagerMock.getAccount.mockReturnValue(Effect.succeed({ balance: 1000n, nonce: 5n }))
+			const getBalanceMock = createMockGetBalanceService()
+			const getCodeMock = createMockGetCodeService()
+			const getStorageAtMock = createMockGetStorageAtService()
+			const blockchainMock = createMockBlockchainService()
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(GetBalanceService, getBalanceMock as any),
+				Layer.succeed(GetCodeService, getCodeMock as any),
+				Layer.succeed(GetStorageAtService, getStorageAtMock as any)
+			)
+
+			const layer = Layer.provide(EthActionsLive, mockLayer)
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getTransactionCount({
+					address: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+				})
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).toBe(5n)
+		})
+
+		it('should return 0n for address with no account', async () => {
+			const vmMock = createMockVm()
+			const evmMock = createMockEvmService()
+			const commonMock = createMockCommon()
+			const stateManagerMock = createMockStateManager()
+			stateManagerMock.getAccount.mockReturnValue(Effect.succeed(undefined))
+			const getBalanceMock = createMockGetBalanceService()
+			const getCodeMock = createMockGetCodeService()
+			const getStorageAtMock = createMockGetStorageAtService()
+			const blockchainMock = createMockBlockchainService()
+
+			const mockLayer = Layer.mergeAll(
+				Layer.succeed(StateManagerService, stateManagerMock as any),
+				Layer.succeed(VmService, vmMock as any),
+				Layer.succeed(EvmService, evmMock as any),
+				Layer.succeed(CommonService, commonMock as any),
+				Layer.succeed(BlockchainService, blockchainMock as any),
+				Layer.succeed(GetBalanceService, getBalanceMock as any),
+				Layer.succeed(GetCodeService, getCodeMock as any),
+				Layer.succeed(GetStorageAtService, getStorageAtMock as any)
+			)
+
+			const layer = Layer.provide(EthActionsLive, mockLayer)
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getTransactionCount({
+					address: '0x0000000000000000000000000000000000000001' as `0x${string}`,
+				})
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).toBe(0n)
+		})
+
+		it('should fail getTransactionCount with invalid address', async () => {
+			const { layer } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getTransactionCount({
+					address: 'invalid-address' as `0x${string}`,
+				})
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit) && exit.cause._tag === 'Fail') {
+				expect(exit.cause.error._tag).toBe('InvalidParamsError')
+			}
+		})
+
+		it('should fail getTransactionCount with invalid blockTag', async () => {
+			const { layer } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getTransactionCount({
+					address: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+					blockTag: 'not-a-valid-block-tag' as any,
+				})
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit) && exit.cause._tag === 'Fail') {
+				expect(exit.cause.error._tag).toBe('InvalidParamsError')
+			}
+		})
+
+		it('should return empty array for getLogs (stub)', async () => {
+			const { layer } = createTestLayer()
+
+			const program = Effect.gen(function* () {
+				const ethActions = yield* EthActionsService
+				return yield* ethActions.getLogs({
+					fromBlock: 'latest',
+					toBlock: 'latest',
+				})
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result).toEqual([])
+		})
+	})
+
 	describe('address validation (Issue #163)', () => {
 		it('should return InvalidParamsError for invalid to address', async () => {
 			const { layer } = createTestLayer()

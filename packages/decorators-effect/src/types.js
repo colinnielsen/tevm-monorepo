@@ -78,6 +78,37 @@
  */
 
 /**
+ * Parameters for eth_getTransactionCount
+ * @typedef {Object} EthGetTransactionCountParams
+ * @property {Address} address - Account address
+ * @property {BlockParam} [blockTag] - Block tag for state
+ */
+
+/**
+ * Parameters for eth_getLogs
+ * @typedef {Object} EthGetLogsParams
+ * @property {BlockParam} [fromBlock] - Starting block
+ * @property {BlockParam} [toBlock] - Ending block
+ * @property {Address | Address[]} [address] - Contract address(es) to filter
+ * @property {Array<Hex | null | (Hex | null)[]>} [topics] - Topic filters
+ * @property {Hex} [blockHash] - Alternative to fromBlock/toBlock
+ */
+
+/**
+ * Log entry result from eth_getLogs
+ * @typedef {Object} JsonRpcLog
+ * @property {Address} address - Contract address
+ * @property {Hex[]} topics - Log topics
+ * @property {Hex} data - Log data
+ * @property {Hex} blockNumber - Block number
+ * @property {Hex} transactionHash - Transaction hash
+ * @property {Hex} transactionIndex - Transaction index
+ * @property {Hex} blockHash - Block hash
+ * @property {Hex} logIndex - Log index
+ * @property {boolean} removed - Whether log was removed in reorg
+ */
+
+/**
  * Block result type for JSON-RPC
  * @typedef {Object} JsonRpcBlock
  * @property {Hex} number - Block number as hex
@@ -117,6 +148,8 @@
  * @property {() => import('effect').Effect.Effect<Array<Address>, never, never>} accounts - Get list of accounts (returns empty array for in-memory client)
  * @property {() => import('effect').Effect.Effect<string, never, never>} netVersion - Get network version (chain ID as string)
  * @property {() => import('effect').Effect.Effect<string, never, never>} web3ClientVersion - Get client version string
+ * @property {(params: EthGetTransactionCountParams) => import('effect').Effect.Effect<bigint, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} getTransactionCount - Get account transaction count (nonce)
+ * @property {(params: EthGetLogsParams) => import('effect').Effect.Effect<Array<JsonRpcLog>, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} getLogs - Get logs matching filter criteria (stub - returns empty array)
  */
 
 /**

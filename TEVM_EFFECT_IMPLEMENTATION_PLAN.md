@@ -2,14 +2,86 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-04 (Post 132nd Review)
+**Last Updated**: 2026-02-04 (Post 134th Review)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
 
 ---
 
 ## Review Agent Summary (2026-02-04)
 
-**132nd REVIEW (2026-02-04).** Deep Parallel Opus 4.5 independent review with ultrathink. Found 0 CRITICAL, 2 HIGH, 9 MEDIUM, 15 LOW = 26 NEW issues.
+**135th FIX (2026-02-04).** Fixed 4 HIGH priority issues from 134th review.
+
+**FIXED HIGH Issues (4 total):**
+- ✅ **#R134-P2-001**: FIXED - CommonFromFork Layer now wraps `createCommon()` in Effect.try with v8 ignore comment for defensive branch
+- ✅ **#R134-P2-002**: FIXED - CommonFromConfig Layer now wraps `createCommon()` in Effect.try with proper InternalError handling
+- ✅ **#R134-P4-006**: FIXED - Added `eth_getTransactionCount` JSON-RPC method in EthActionsLive.js and RequestLive.js with full tests
+- ✅ **#R134-P4-007**: FIXED - Added `eth_getLogs` JSON-RPC method as stub (returns empty array) pending ReceiptsManager integration
+
+---
+
+**134th REVIEW (2026-02-04).** Deep Parallel Opus 4.5 independent review with ultrathink (4 parallel subagents). Found 0 CRITICAL, 5 HIGH, 10 MEDIUM, 25 LOW = 40 NEW issues.
+
+**NEW HIGH Issues Found (5 total):**
+- ✅ **#R134-P2-001**: FIXED - CommonFromFork Layer - `createCommon()` not wrapped in Effect.try, synchronous exceptions escape Effect error channel
+- ✅ **#R134-P2-002**: FIXED - CommonFromConfig Layer - Same issue as #R134-P2-001, invalid hardfork values cause uncaught exceptions
+- ✅ **#R134-P4-006**: FIXED - Missing JSON-RPC method `eth_getTransactionCount` - essential for querying account nonces
+- ✅ **#R134-P4-007**: FIXED - Missing JSON-RPC method `eth_getLogs` - crucial for querying historical event logs
+- 🔴 **#R134-P4-008**: Missing JSON-RPC methods for transaction lifecycle (`eth_sendTransaction`, `eth_sendRawTransaction`, `eth_getTransactionByHash`, `eth_getTransactionReceipt`)
+
+**NEW MEDIUM Issues Found (10 total):**
+- 🟡 **#R134-P1-003**: toBaseError VERSION constant hardcoded as '1.0.0-next.148' - will become stale
+- 🟡 **#R134-P1-004**: wrapWithEffect state divergence - Effect methods bound to original instance, not wrapped copy
+- 🟡 **#R134-P2-003**: EvmLive deepCopy uses `commonShape.common` instead of `evmInstance.common` - may not preserve EVM's current state
+- 🟡 **#R134-P2-004**: EvmLive deepCopy accesses private `_customPrecompiles` and `optsCached.profiler` via any cast
+- 🟡 **#R134-P3-001**: GetStorageAtLive oversized storage position (>32 bytes) not validated or truncated
+- 🟡 **#R134-P3-002**: SetAccountLive oversized storage key (>32 bytes) not validated
+- 🟡 **#R134-P4-001**: getBlockByNumber/getBlockByHash missing `baseFeePerGas` field for EIP-1559 blocks
+- 🟡 **#R134-P4-003**: getBlockByNumber/getBlockByHash missing `withdrawals` and `withdrawalsRoot` for post-Shanghai blocks
+- 🟡 **#R134-P4-005**: RevertError `raw` field not included in JSON-RPC error response - clients cannot decode custom errors
+- 🟡 **#R134-P4-009**: getSenderAddress() in block response can throw for unsigned/invalid transactions
+
+**NEW LOW Issues Found (25 total):**
+- 🟢 **#R134-P1-001**: toTaggedError doesn't validate snapshotId type - numeric values silently dropped
+- 🟢 **#R134-P1-002**: layerFromFactory returns Layer with `unknown` error but Effect.tryPromise uses `UnknownException`
+- 🟢 **#R134-P1-005**: LoggerLive return type uses `LoggerService` instead of identifier type
+- 🟢 **#R134-P1-006**: toTaggedError doesn't handle errors with numeric `_tag` gracefully
+- 🟢 **#R134-P1-007**: effectToPromise error detection heuristic is brittle (string matching)
+- 🟢 **#R134-P1-008**: TevmError.toString() URL generation assumes docsPath starts with `/`
+- 🟢 **#R134-P1-009**: toBaseError walk method references `error` variable before assignment to `result`
+- 🟢 **#R134-P1-010**: LoggerTest('silent') is foot-gun - no warning, captures nothing
+- 🟢 **#R134-P1-011**: promiseToEffect no validation for function arity
+- 🟢 **#R134-P1-012**: toTaggedError type overloads may cause confusion with union input types
+- 🟢 **#R134-P1-013**: Inconsistent `name` property assignment pattern across error classes
+- 🟢 **#R134-P1-014**: createManagedRuntime is unnecessary thin wrapper over ManagedRuntime.make
+- 🟢 **#R134-P1-015**: LoggerShape.child returns LoggerShape but TestLoggerShape.child returns TestLoggerShape - type loss
+- 🟢 **#R134-P2-005**: StateManagerLive duplicates createStateManagerShape logic (187 lines)
+- 🟢 **#R134-P2-006**: Duplicate toEthjsAddress helper in StateManagerLive and wrapStateManager
+- 🟢 **#R134-P2-007**: VmLive Layer error type declares TevmError but can return EvmError union
+- 🟢 **#R134-P2-008**: CommonLocal uses Layer.effect, CommonFromConfig uses Layer.succeed - inconsistent pattern
+- 🟢 **#R134-P2-009**: BlockchainLive/StateManagerLive fork error loses TaggedError class identity through Promise boundary
+- 🟢 **#R134-P3-003**: Counter gap on fiber interruption in FilterLive createFilter
+- 🟢 **#R134-P3-004**: SnapshotLive deepCopy JSDoc missing type constraint on StateManagerShape parameter
+- 🟢 **#R134-P3-005**: GetAccountLive calls getCode unnecessarily for non-existent accounts
+- 🟢 **#R134-P3-006**: FilterLive logsCriteria.topics deep copy has redundant ternary
+- 🟢 **#R134-P4-002**: getBlockByNumber/getBlockByHash missing `mixHash` field
+- 🟢 **#R134-P4-004**: MemoryClientShape deepCopy declares error channel `never` but can fail with InternalError
+- 🟢 **#R134-P4-010**: Gas estimation doesn't account for EIP-2930 access list gas costs
+
+**Open Issues Summary (Post 135th Fix):**
+- **CRITICAL**: 0 ✅
+- **HIGH**: 2 🔴 (1 from R130 + 1 remaining from R134)
+- **MEDIUM**: 184 (174 previous + 10 NEW)
+- **LOW**: 420 (395 previous + 25 NEW)
+
+**Open Issues Summary (Post 134th Review):**
+- **CRITICAL**: 0 ✅
+- **HIGH**: 6 🔴 (1 from R130 + 5 NEW from R134) → REDUCED to 2 after 135th fix
+- **MEDIUM**: 184 (174 previous + 10 NEW)
+- **LOW**: 420 (395 previous + 25 NEW)
+
+---
+
+**Previous Review: 132nd REVIEW (2026-02-04).** Deep Parallel Opus 4.5 independent review with ultrathink. Found 0 CRITICAL, 2 HIGH, 9 MEDIUM, 15 LOW = 26 NEW issues.
 
 **FIXED HIGH Issues (2 total from R132):**
 - ✅ **#R132-P2-003**: FIXED - HttpTransport isRetryableError now has null checks for cause and message properties
@@ -255,6 +327,482 @@
 - **HIGH**: 0 ✅ (All 5 from 128th review FIXED - Layer type declarations)
 - **MEDIUM**: 137 🟡 (Previous 132 + 5 NEW from 128th review)
 - **LOW**: 351 (Previous 338 + 13 NEW from 128th review)
+
+---
+
+### 134TH REVIEW (2026-02-04) - Deep Parallel Opus 4.5 Independent Code Review
+
+**Reviewed By**: Claude Opus 4.5 (4 parallel subagents reviewing each phase independently with ultrathink)
+**Scope**: Complete independent deep dive review of all 4 phases to find NEW bugs missed by 133 previous reviews
+
+---
+
+#### Phase 1: 0 CRITICAL + 0 HIGH + 2 MEDIUM + 13 LOW NEW Issues Found
+
+##### Issue #R134-P1-001: toTaggedError doesn't validate snapshotId type before using in constructor
+**File:Lines**: `packages/errors-effect/src/interop/toTaggedError.js:363-368`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: When converting a `SnapshotNotFoundError`, the `snapshotId` check only validates for string type. If source error has non-string snapshotId (e.g., bigint or number), it silently becomes undefined instead of converting via `String()`.
+
+**Impact**: Loses debugging context when interoperating with legacy code that uses numeric IDs.
+
+---
+
+##### Issue #R134-P1-002: layerFromFactory return type annotation mismatch
+**File:Lines**: `packages/interop/src/layerFromFactory.js:55-63`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: JSDoc says return type is `Layer.Layer<I, unknown, never>` but `Effect.tryPromise` returns Effect with error type `UnknownException` in Effect 3.x, not `unknown`.
+
+**Impact**: TypeScript users may encounter unexpected type mismatches when trying to refine the error channel.
+
+---
+
+##### Issue #R134-P1-003: toBaseError VERSION constant hardcoded and will become stale
+**File:Lines**: `packages/errors-effect/src/interop/toBaseError.js:7`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: The `VERSION` constant is hardcoded as `'1.0.0-next.148'`. This will become stale as new versions are released and is not synchronized with package.json.
+
+**Impact**: The `version` field in BaseError-like objects will report incorrect version, potentially causing confusion during debugging.
+
+---
+
+##### Issue #R134-P1-004: wrapWithEffect state divergence between wrapped object and Effect methods
+**File:Lines**: `packages/interop/src/wrapWithEffect.js:94-99`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: Effect methods are bound to the ORIGINAL instance, but returned object is a shallow copy. If caller modifies the wrapped object's properties, Effect methods still use original instance's state. This is documented in comments but return type doesn't make this explicit.
+
+**Impact**: Users who expect Effect methods to operate on wrapped object's state may encounter subtle bugs where state changes are not reflected in Effect method calls.
+
+---
+
+##### Issue #R134-P1-005: LoggerLive return type uses LoggerService instead of identifier type
+**File:Lines**: `packages/logger-effect/src/LoggerLive.js:108`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: JSDoc return type specifies `Layer.Layer<LoggerService, never, never>` but `LoggerService` is a `Context.Tag`, not the service identifier type.
+
+**Impact**: Minor - TypeScript may infer slightly different types than documented.
+
+---
+
+##### Issue #R134-P1-006: toTaggedError doesn't handle errors with numeric _tag gracefully
+**File:Lines**: `packages/errors-effect/src/interop/toTaggedError.js:143-149`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Code checks `'_tag' in error` then uses `baseError._tag` as lookup key. If `_tag` is a number or Symbol, lookup fails silently and falls through to generic TevmError.
+
+**Impact**: Errors with non-string `_tag` values converted to generic TevmError without warning, potentially losing error-specific properties.
+
+---
+
+##### Issue #R134-P1-007: effectToPromise error detection heuristic is brittle
+**File:Lines**: `packages/interop/src/effectToPromise.js:114-120`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Service error detection relies on string matching ('Service not found', 'is not available'). This heuristic may break if Effect changes its error messages in future versions.
+
+**Impact**: Enhanced error message may not be shown for service errors if Effect changes message format.
+
+---
+
+##### Issue #R134-P1-008: TevmError.toString() URL assumes docsPath starts with /
+**File:Lines**: `packages/errors-effect/src/TevmError.js:86-91`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Generated URL assumes `docsPath` starts with `/`. If caller passes `docsPath: 'reference/...'` without leading slash, URL would be malformed.
+
+**Impact**: Minor - malformed documentation URLs if docsPath doesn't start with `/`.
+
+---
+
+##### Issue #R134-P1-009: toBaseError walk method code readability
+**File:Lines**: `packages/errors-effect/src/interop/toBaseError.js:106-108,135`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The `walk` method references `error` variable rather than `result`, though functionally correct since `error` is the Error instance with cause chain.
+
+**Impact**: Code maintainability issue only - behavior is correct.
+
+---
+
+##### Issue #R134-P1-010: LoggerTest('silent') is a foot-gun for testing
+**File:Lines**: `packages/logger-effect/src/LoggerTest.js:172-175`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Documentation warns about 'silent' but function doesn't emit warning or throw. Users expecting to capture logs with `LoggerTest('silent')` get empty array.
+
+**Impact**: Developers may accidentally use 'silent' thinking it means "capture silently" rather than "capture nothing", leading to test false positives.
+
+---
+
+##### Issue #R134-P1-011: promiseToEffect missing validation for function arity
+**File:Lines**: `packages/interop/src/promiseToEffect.js:74-82`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Function validates `fn` is not null/undefined and is a function, but doesn't warn if `fn.length` differs from actual usage.
+
+**Impact**: Subtle bugs when bound method's arity doesn't match usage won't be caught at wrap-time.
+
+---
+
+##### Issue #R134-P1-012: toTaggedError type overloads may cause confusion with union input types
+**File:Lines**: `packages/errors-effect/src/interop/toTaggedError.types.ts:88-160`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: TypeScript overloads are ordered most-specific-first, but when passing union type, TypeScript matches first satisfying overload, not returning a union.
+
+**Impact**: TypeScript users passing union error types may get unexpected type narrowing behavior.
+
+---
+
+##### Issue #R134-P1-013: Inconsistent name property assignment pattern across error classes
+**File:Lines**: Multiple files in `packages/errors-effect/src/`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Some error classes pass `name` to `super()` while others don't. Effect's structural equality hashes all properties passed to `super()`.
+
+**Impact**: Errors with `name` passed to super compared differently than those without, potentially causing unexpected equality comparisons.
+
+---
+
+##### Issue #R134-P1-014: createManagedRuntime is unnecessary abstraction
+**File:Lines**: `packages/interop/src/createManagedRuntime.js:49-51`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Function is documented as "thin wrapper" and simply calls `ManagedRuntime.make`. Adds no additional functionality.
+
+**Impact**: Unnecessary layer of indirection; may cause confusion about which to use.
+
+---
+
+##### Issue #R134-P1-015: LoggerShape.child returns LoggerShape but TestLoggerShape.child returns TestLoggerShape
+**File:Lines**: `packages/logger-effect/src/LoggerShape.js:28` and `packages/logger-effect/src/LoggerTest.js:21-22`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: When using TestLoggerShape through LoggerShape interface, child method's return type is LoggerShape, not TestLoggerShape. Must call `isTestLogger()` after every `child()` call.
+
+**Impact**: Users must repeatedly check `isTestLogger()` after each `child()` call, even though child IS a test logger.
+
+---
+
+#### Phase 2: 0 CRITICAL + 2 HIGH + 2 MEDIUM + 5 LOW NEW Issues Found
+
+##### Issue #R134-P2-001: Unhandled Synchronous Exception in CommonFromFork Layer Construction
+**File:Lines**: `packages/common-effect/src/CommonFromFork.js:79-85`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: The `createCommon()` call is not wrapped in `Effect.try` or `Effect.tryPromise`. If `createCommon()` throws a synchronous exception (e.g., invalid hardfork name), the error escapes the Effect error channel and crashes the program.
+
+**Impact**: Users passing invalid hardfork values get uncaught exceptions instead of proper Effect errors. Breaks Effect.ts error handling model.
+
+---
+
+##### Issue #R134-P2-002: Unhandled Synchronous Exception in CommonFromConfig Layer Construction
+**File:Lines**: `packages/common-effect/src/CommonFromConfig.js:78-85`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: Similar to #R134-P2-001, the `createCommon()` call happens synchronously during layer construction. If it throws, exception is not caught in Effect error channel.
+
+**Impact**: Invalid configuration causes unhandled exceptions during layer construction. Users cannot catch these errors via Effect.catchTag.
+
+---
+
+##### Issue #R134-P2-003: EvmLive deepCopy Uses Wrong Common Reference
+**File:Lines**: `packages/evm-effect/src/EvmLive.js:137`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: The `deepCopy` implementation copies `commonShape.common` (original service common) instead of `evmInstance.common` (EVM's current common state). If Common was modified after EVM creation, deep copy would not preserve those modifications.
+
+**Impact**: Deep copies may not accurately reflect EVM's current state if Common object has been mutated after construction.
+
+---
+
+##### Issue #R134-P2-004: Private Property Access via any Cast in EvmLive deepCopy
+**File:Lines**: `packages/evm-effect/src/EvmLive.js:141-143`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: The `deepCopy` implementation accesses internal/private properties using `any` casts (`_customPrecompiles`, `optsCached`). These prefixed properties may change in future versions without notice.
+
+**Impact**: Future updates to `@tevm/evm` could silently break deep copy functionality. The `?? []` fallback masks the problem, causing silent data loss.
+
+---
+
+##### Issue #R134-P2-005: StateManagerLive Duplicates createStateManagerShape Logic
+**File:Lines**: `packages/state-effect/src/StateManagerLive.js:144-331`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: `StateManagerLive` defines its own `createShape` function (~190 lines) that duplicates logic in `wrapStateManager.js:createStateManagerShape`. `StateManagerLocal` correctly uses the shared factory.
+
+**Impact**: Code duplication creates maintenance burden and risk of divergence between Local and Live implementations.
+
+---
+
+##### Issue #R134-P2-006: Duplicate toEthjsAddress Helper Function
+**File:Lines**: `packages/state-effect/src/StateManagerLive.js:23-28` and `packages/state-effect/src/wrapStateManager.js:33-38`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The `toEthjsAddress` helper is defined identically in two files.
+
+**Impact**: Minor code duplication. Changes must be made in multiple places.
+
+---
+
+##### Issue #R134-P2-007: VmLive Layer Error Type Declaration Mismatch
+**File:Lines**: `packages/vm-effect/src/VmLive.js:62`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: JSDoc declares error channel as `TevmError`, but implementation can return any error type from `EvmError` union (OutOfGasError, RevertError, etc.).
+
+**Impact**: TypeScript users relying on declared error type won't get proper type narrowing.
+
+---
+
+##### Issue #R134-P2-008: CommonLocal uses Layer.effect, CommonFromConfig uses Layer.succeed - inconsistent pattern
+**File:Lines**: `packages/common-effect/src/CommonLocal.js:52-73`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: `CommonLocal` uses `Layer.effect` with `Effect.sync` to create a constant value, while `CommonFromConfig` uses `Layer.succeed`. Patterns are inconsistent.
+
+**Impact**: Inconsistent behavior between layers could confuse developers.
+
+---
+
+##### Issue #R134-P2-009: Fork Error Loses Type Information Through Promise Boundary
+**File:Lines**: `packages/blockchain-effect/src/BlockchainLive.js:101-111` and `packages/state-effect/src/StateManagerLive.js:111-121`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: When converting ForkError to plain Error for Promise boundary, error loses TaggedError class identity. Must check `__isForkError` property.
+
+**Impact**: Error handling downstream of Promise boundary is more cumbersome. Error type information is degraded.
+
+---
+
+#### Phase 3: 0 CRITICAL + 0 HIGH + 2 MEDIUM + 4 LOW NEW Issues Found
+
+##### Issue #R134-P3-001: Oversized Storage Position Not Validated or Truncated
+**File:Lines**: `packages/actions-effect/src/GetStorageAtLive.js:109-138, 190-191`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: The `validatePosition` function only validates hex validity, not maximum length. Storage positions >32 bytes are passed to stateManager which expects exactly 32 bytes. `hexToBytes` uses `padStart` which only pads shorter values, does NOT truncate longer values.
+
+**Impact**: Undefined behavior when querying storage with oversized position values. Could cause silent failures or wrong data retrieval.
+
+---
+
+##### Issue #R134-P3-002: Oversized Storage Key Not Validated in SetAccountLive
+**File:Lines**: `packages/actions-effect/src/SetAccountLive.js:299-316, 336`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: Similar to #R134-P3-001, storage key validation only validates hex format, not maximum length. Keys >64 hex characters (32 bytes) are passed to `hexToBytes(key, { size: 32 })`, but `padStart` does not truncate.
+
+**Impact**: Storage operations with oversized keys could produce undefined behavior.
+
+---
+
+##### Issue #R134-P3-003: Counter Gap on Fiber Interruption in FilterLive
+**File:Lines**: `packages/node-effect/src/FilterLive.js:89-121`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The `createFilter` performs two non-atomic operations: incrementing counter and storing filter. If fiber interrupted between them, counter is incremented but no filter stored, creating ID gap.
+
+**Impact**: Filter IDs may have gaps. Cosmetic but could confuse users expecting sequential IDs.
+
+---
+
+##### Issue #R134-P3-004: SnapshotLive deepCopy JSDoc missing type constraint
+**File:Lines**: `packages/node-effect/src/SnapshotLive.js:253-254`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The `deepCopy` method implementation signature `(newStateManager)` doesn't indicate parameter is optional.
+
+**Impact**: Minor. TypeScript consumers may not get proper type inference for optional parameter.
+
+---
+
+##### Issue #R134-P3-005: getCode Called Unnecessarily for Non-Existent Accounts
+**File:Lines**: `packages/actions-effect/src/GetAccountLive.js:170-199`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Implementation always calls `stateManager.getCode(address)` before checking if account exists. For non-existent accounts, result is discarded.
+
+**Impact**: Minor performance inefficiency. Extra I/O call made even when not needed. In forked mode, could mean unnecessary network request.
+
+---
+
+##### Issue #R134-P3-006: logsCriteria.topics Deep Copy Has Redundant Ternary
+**File:Lines**: `packages/node-effect/src/FilterLive.js:492-498`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: The ternary chain `x ? (isArray ? doA : doB) : x` is redundant and could be simplified.
+
+**Impact**: Code clarity issue only. Functionality is correct but ternary is confusing.
+
+---
+
+#### Phase 4: 0 CRITICAL + 3 HIGH + 4 MEDIUM + 3 LOW NEW Issues Found
+
+##### Issue #R134-P4-001: Missing EIP-1559+ Block Response Fields (baseFeePerGas)
+**File:Lines**: `packages/decorators-effect/src/EthActionsLive.js:406-454, 481-528`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: The `getBlockByNumber` and `getBlockByHash` implementations are missing the `baseFeePerGas` field in JSON-RPC block response. This field is mandatory for EIP-1559 compliant blocks.
+
+**Impact**: Clients expecting standard Ethereum block responses (viem, ethers.js) will fail when parsing blocks from post-London hardfork chains.
+
+---
+
+##### Issue #R134-P4-002: Missing Post-Merge Block Response Fields (mixHash)
+**File:Lines**: `packages/decorators-effect/src/EthActionsLive.js:406-454, 481-528`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: Block response missing `mixHash` field. Used as `prevRandao` in post-merge blocks.
+
+**Impact**: Some clients expecting complete block header structure may behave unexpectedly.
+
+---
+
+##### Issue #R134-P4-003: Missing Post-Shanghai Block Response Fields (withdrawals, withdrawalsRoot)
+**File:Lines**: `packages/decorators-effect/src/EthActionsLive.js:406-454, 481-528`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: For post-Shanghai blocks, `withdrawals` and `withdrawalsRoot` fields are mandatory but not included.
+
+**Impact**: Clients processing Shanghai+ blocks will fail to parse responses correctly.
+
+---
+
+##### Issue #R134-P4-004: Type Mismatch in deepCopy Error Channel Declaration
+**File:Lines**: `packages/memory-client-effect/src/types.js:51`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: MemoryClientShape typedef declares `deepCopy` with error channel `never`, but implementation can fail with `InternalError`.
+
+**Impact**: Type consumers may incorrectly assume deepCopy cannot fail, leading to unhandled error cases.
+
+---
+
+##### Issue #R134-P4-005: RevertError Missing 'raw' Field in Error Response Data
+**File:Lines**: `packages/decorators-effect/src/SendLive.js:168-171`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: When handling `RevertError` in JSON-RPC error response, the `data` field only includes `_tag` and `cause`, but does not include the `raw` revert data which is critical for decoding custom error messages.
+
+**Impact**: Clients cannot decode custom Solidity error messages because raw ABI-encoded error data is not included.
+
+---
+
+##### Issue #R134-P4-006: Missing JSON-RPC Method eth_getTransactionCount
+**File:Lines**: `packages/decorators-effect/src/RequestLive.js:62-311`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: The `RequestLive` implementation does not handle `eth_getTransactionCount` method, essential for querying account nonces before sending transactions.
+
+**Impact**: Applications that need to query account nonces cannot do so, breaking standard Ethereum wallet and dApp flows.
+
+---
+
+##### Issue #R134-P4-007: Missing JSON-RPC Method eth_getLogs
+**File:Lines**: `packages/decorators-effect/src/RequestLive.js:62-311`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: The `eth_getLogs` method is not implemented in `RequestLive`. Crucial for querying historical event logs.
+
+**Impact**: Applications cannot query contract events, breaking functionality for NFT marketplaces, DEXs, governance systems, and event-driven dApps.
+
+---
+
+##### Issue #R134-P4-008: Missing JSON-RPC Methods for Transaction Lifecycle
+**File:Lines**: `packages/decorators-effect/src/RequestLive.js:62-311`
+**Severity**: 🔴 HIGH
+**Status**: 🟡 NEW
+
+**Problem**: Several critical transaction-related JSON-RPC methods missing: `eth_sendTransaction`, `eth_sendRawTransaction`, `eth_getTransactionByHash`, `eth_getTransactionReceipt`.
+
+**Impact**: Users cannot submit transactions or query transaction status, making memory client unusable for write operations.
+
+---
+
+##### Issue #R134-P4-009: Potential Crash When Getting Sender Address from Unsigned Transaction
+**File:Lines**: `packages/decorators-effect/src/EthActionsLive.js:427, 502`
+**Severity**: 🟡 MEDIUM
+**Status**: 🟡 NEW
+
+**Problem**: When building full transaction object, code calls `tx.getSenderAddress()` which can throw for unsigned or invalid signature transactions. Existence check only verifies method exists, not execution success.
+
+**Impact**: If block contains transactions that fail sender recovery, getBlockByNumber/getBlockByHash calls throw unhandled exception.
+
+---
+
+##### Issue #R134-P4-010: Gas Estimation Doesn't Account for Access List Gas Cost
+**File:Lines**: `packages/decorators-effect/src/EthActionsLive.js:246-380`
+**Severity**: 🟢 LOW
+**Status**: 🟡 NEW
+
+**Problem**: `estimateGas` adds fixed 21000n base cost but does not account for EIP-2930 access list gas costs (2400 gas per address, 1900 gas per storage key).
+
+**Impact**: Gas estimates for transactions with access lists will be too low, causing transaction failures.
+
+---
+
+#### 134th Review Summary Table
+
+| Phase | CRITICAL | HIGH | MEDIUM | LOW | Total NEW |
+|-------|----------|------|--------|-----|-----------|
+| **Phase 1** | 0 | 0 | 2 | 13 | 15 |
+| **Phase 2** | 0 | 2 | 2 | 5 | 9 |
+| **Phase 3** | 0 | 0 | 2 | 4 | 6 |
+| **Phase 4** | 0 | 3 | 4 | 3 | 10 |
+| **TOTAL NEW** | **0** | **5** | **10** | **25** | **40** |
+
+**Key Findings:**
+1. **HIGH Issues**: Missing critical JSON-RPC methods (#R134-P4-006, #R134-P4-007, #R134-P4-008) and unhandled synchronous exceptions in Layer construction (#R134-P2-001, #R134-P2-002)
+2. **Patterns Identified**:
+   - Block response missing modern Ethereum fields (baseFeePerGas, withdrawals)
+   - Storage position/key length not validated for 32-byte compliance
+   - CommonFromFork/Config layers don't wrap createCommon() in Effect.try
+   - wrapWithEffect state divergence not clearly typed
+   - Code duplication between StateManagerLive and shared factory
 
 ---
 

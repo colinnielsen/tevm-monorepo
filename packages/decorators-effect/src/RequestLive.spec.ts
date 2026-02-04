@@ -64,6 +64,8 @@ describe('RequestLive', () => {
 		accounts: vi.fn(() => Effect.succeed([])),
 		netVersion: vi.fn(() => Effect.succeed('1')),
 		web3ClientVersion: vi.fn(() => Effect.succeed('tevm/1.0.0')),
+		getTransactionCount: vi.fn(() => Effect.succeed(5n)),
+		getLogs: vi.fn(() => Effect.succeed([])),
 	})
 
 	const createMockTevmActions = () => ({
@@ -743,5 +745,108 @@ describe('RequestLive', () => {
 		await expect(
 			Effect.runPromise(program.pipe(Effect.provide(layer)))
 		).rejects.toThrow('Missing snapshot ID parameter')
+	})
+
+	// Tests for eth_getTransactionCount and eth_getLogs
+	it('should handle eth_getTransactionCount request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getTransactionCount',
+				params: ['0x1234567890123456789012345678901234567890', 'latest'],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toBe('0x5') // 5 in hex
+		expect(mocks.ethActions.getTransactionCount).toHaveBeenCalled()
+	})
+
+	it('should handle eth_getTransactionCount without blockTag', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getTransactionCount',
+				params: ['0x1234567890123456789012345678901234567890'],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toBe('0x5')
+		expect(mocks.ethActions.getTransactionCount).toHaveBeenCalled()
+	})
+
+	it('should fail eth_getTransactionCount with missing address', async () => {
+		const { layer } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getTransactionCount',
+				params: [],
+			})
+		})
+
+		await expect(
+			Effect.runPromise(program.pipe(Effect.provide(layer)))
+		).rejects.toThrow('Missing address parameter')
+	})
+
+	it('should handle eth_getLogs request', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getLogs',
+				params: [{ fromBlock: 'latest', toBlock: 'latest' }],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toEqual([])
+		expect(mocks.ethActions.getLogs).toHaveBeenCalled()
+	})
+
+	it('should handle eth_getLogs with all filter params', async () => {
+		const { layer, mocks } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getLogs',
+				params: [{
+					fromBlock: '0x0',
+					toBlock: 'latest',
+					address: '0x1234567890123456789012345678901234567890',
+					topics: ['0x1234'],
+					blockHash: '0x5678',
+				}],
+			})
+		})
+
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+		expect(result).toEqual([])
+		expect(mocks.ethActions.getLogs).toHaveBeenCalled()
+	})
+
+	it('should fail eth_getLogs with missing filter params', async () => {
+		const { layer } = createTestLayer()
+
+		const program = Effect.gen(function* () {
+			const requestService = yield* RequestService
+			return yield* requestService.request({
+				method: 'eth_getLogs',
+				params: [],
+			})
+		})
+
+		await expect(
+			Effect.runPromise(program.pipe(Effect.provide(layer)))
+		).rejects.toThrow('Missing filter parameters')
 	})
 })

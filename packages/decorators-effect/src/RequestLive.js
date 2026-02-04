@@ -161,6 +161,45 @@ export const RequestLive = /** @type {Layer.Layer<import('./RequestService.js').
 							return /** @type {T} */ (`0x${result.toString(16)}`)
 						}
 
+						case 'eth_getTransactionCount': {
+							const [address, blockTag] = /** @type {[string, string | undefined]} */ (rpcParams)
+							if (!address) {
+								return yield* Effect.fail(
+									new InvalidParamsError({
+										method: 'eth_getTransactionCount',
+										params: rpcParams,
+										message: 'Missing address parameter',
+									})
+								)
+							}
+							const result = yield* ethActions.getTransactionCount({
+								address: /** @type {import('./types.js').Address} */ (address),
+								...(blockTag !== undefined && { blockTag: /** @type {import('./types.js').BlockParam} */ (blockTag) }),
+							})
+							return /** @type {T} */ (`0x${result.toString(16)}`)
+						}
+
+						case 'eth_getLogs': {
+							const [filterParams] = /** @type {[any]} */ (rpcParams)
+							if (!filterParams) {
+								return yield* Effect.fail(
+									new InvalidParamsError({
+										method: 'eth_getLogs',
+										params: rpcParams,
+										message: 'Missing filter parameters',
+									})
+								)
+							}
+							const result = yield* ethActions.getLogs({
+								...(filterParams.fromBlock !== undefined && { fromBlock: filterParams.fromBlock }),
+								...(filterParams.toBlock !== undefined && { toBlock: filterParams.toBlock }),
+								...(filterParams.address !== undefined && { address: filterParams.address }),
+								...(filterParams.topics !== undefined && { topics: filterParams.topics }),
+								...(filterParams.blockHash !== undefined && { blockHash: filterParams.blockHash }),
+							})
+							return /** @type {T} */ (result)
+						}
+
 						case 'eth_getBlockByNumber': {
 							const [blockTag, includeTransactions] = /** @type {[string, boolean | undefined]} */ (rpcParams)
 							if (blockTag === undefined) {

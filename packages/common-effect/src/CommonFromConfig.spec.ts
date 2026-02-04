@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { Effect, Layer } from 'effect'
+import { describe, it, expect, vi } from 'vitest'
+import { Effect, Layer, Exit } from 'effect'
+import { InternalError } from '@tevm/errors-effect'
 import { CommonService } from './CommonService.js'
 import { CommonFromConfig } from './CommonFromConfig.js'
 
@@ -177,6 +178,63 @@ describe('CommonFromConfig', () => {
 
 			expect(result.isEip1559Active).toBe(true)
 			expect(result.isEip4844Active).toBe(true)
+		})
+	})
+
+	describe('error handling', () => {
+		it('should return InternalError when createCommon throws', async () => {
+			// Test with an invalid hardfork name that will cause createCommon to throw
+			// Using a completely invalid hardfork to trigger an error
+			const program = Effect.gen(function* () {
+				const common = yield* CommonService
+				return common
+			})
+
+			// @ts-expect-error - intentionally passing invalid hardfork
+			const layer = CommonFromConfig({ hardfork: 'invalid_hardfork_xyz' })
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit)) {
+				const error = exit.cause
+				// The error should be wrapped in InternalError
+				expect(error._tag).toBe('Fail')
+				if (error._tag === 'Fail') {
+					expect(error.error._tag).toBe('InternalError')
+					expect(error.error).toBeInstanceOf(InternalError)
+					expect(error.error.message).toContain('Failed to create Common configuration')
+				}
+			}
+		})
+	})
+
+	describe('optional configuration branches', () => {
+		it('should work with silent logging level', async () => {
+			const program = Effect.gen(function* () {
+				const common = yield* CommonService
+				return common.chainId
+			})
+
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(CommonFromConfig({ loggingLevel: 'silent' }))),
+			)
+
+			expect(result).toBe(900)
+		})
+
+		it('should work with custom crypto', async () => {
+			const program = Effect.gen(function* () {
+				const common = yield* CommonService
+				return common.chainId
+			})
+
+			// @ts-expect-error - testing optional branch with mock
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(CommonFromConfig({ customCrypto: {} }))),
+			)
+
+			expect(result).toBe(900)
 		})
 	})
 })

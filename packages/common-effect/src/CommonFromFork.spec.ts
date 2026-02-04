@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { Effect, Layer } from 'effect'
+import { Effect, Layer, Exit } from 'effect'
 import { ForkConfigService, ForkConfigStatic } from '@tevm/transport-effect'
+import { InternalError } from '@tevm/errors-effect'
 import { CommonService } from './CommonService.js'
 import { CommonFromFork } from './CommonFromFork.js'
 
@@ -213,6 +214,57 @@ describe('CommonFromFork', () => {
 			const result = await Effect.runPromise(program.pipe(Effect.provide(fullLayer)))
 
 			expect(result).toBe(Number(chainId))
+		})
+	})
+
+	describe('error handling', () => {
+		it('should return InternalError when createCommon throws', async () => {
+			const program = Effect.gen(function* () {
+				const common = yield* CommonService
+				return common
+			})
+
+			const forkConfigLayer = createMockForkConfig(1n)
+			// @ts-expect-error - intentionally passing invalid hardfork
+			const commonLayer = Layer.provide(
+				CommonFromFork({ hardfork: 'invalid_hardfork_xyz' }),
+				forkConfigLayer,
+			)
+			const fullLayer = Layer.merge(forkConfigLayer, commonLayer)
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(fullLayer)))
+
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit)) {
+				const error = exit.cause
+				// The error should be wrapped in InternalError
+				expect(error._tag).toBe('Fail')
+				if (error._tag === 'Fail') {
+					expect(error.error._tag).toBe('InternalError')
+					expect(error.error).toBeInstanceOf(InternalError)
+					expect(error.error.message).toContain('Failed to create Common configuration')
+				}
+			}
+		})
+	})
+
+	describe('optional configuration branches', () => {
+		it('should work with silent logging level', async () => {
+			const program = Effect.gen(function* () {
+				const common = yield* CommonService
+				return common.chainId
+			})
+
+			const forkConfigLayer = createMockForkConfig(1n)
+			const commonLayer = Layer.provide(
+				CommonFromFork({ loggingLevel: 'silent' }),
+				forkConfigLayer,
+			)
+			const fullLayer = Layer.merge(forkConfigLayer, commonLayer)
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(fullLayer)))
+
+			expect(result).toBe(1)
 		})
 	})
 })

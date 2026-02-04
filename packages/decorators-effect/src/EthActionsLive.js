@@ -14,6 +14,7 @@ import {
 	GetCodeService,
 	GetStorageAtService,
 } from '@tevm/actions-effect'
+import { StateManagerService } from '@tevm/state-effect'
 import { InternalError, RevertError, OutOfGasError, InvalidOpcodeError, InvalidParamsError } from '@tevm/errors-effect'
 
 /**
@@ -55,7 +56,7 @@ import { InternalError, RevertError, OutOfGasError, InvalidOpcodeError, InvalidP
  * ```
  *
  */
-export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService.js').EthActionsServiceId, never, import('@tevm/vm-effect').VmService | import('@tevm/evm-effect').EvmService | import('@tevm/common-effect').CommonService | import('@tevm/blockchain-effect').BlockchainService | import('@tevm/actions-effect').GetBalanceService | import('@tevm/actions-effect').GetCodeService | import('@tevm/actions-effect').GetStorageAtService>} */ (Layer.effect(
+export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService.js').EthActionsServiceId, never, import('@tevm/vm-effect').VmService | import('@tevm/evm-effect').EvmService | import('@tevm/common-effect').CommonService | import('@tevm/blockchain-effect').BlockchainService | import('@tevm/actions-effect').GetBalanceService | import('@tevm/actions-effect').GetCodeService | import('@tevm/actions-effect').GetStorageAtService | import('@tevm/state-effect').StateManagerService>} */ (Layer.effect(
 	EthActionsService,
 	Effect.gen(function* () {
 		const vm = yield* VmService
@@ -65,6 +66,7 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 		const getBalanceService = yield* GetBalanceService
 		const getCodeService = yield* GetCodeService
 		const getStorageAtService = yield* GetStorageAtService
+		const stateManager = yield* StateManagerService
 
 		return /** @type {import('./types.js').EthActionsShape} */ ({
 			blockNumber: () =>
@@ -534,6 +536,68 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 			netVersion: () => Effect.succeed(String(common.chainId)),
 
 			web3ClientVersion: () => Effect.succeed('tevm/1.0.0'),
+
+			getTransactionCount: (params) =>
+				Effect.gen(function* () {
+					// Validate address format
+					const address = params.address
+					if (!address || typeof address !== 'string') {
+						return yield* Effect.fail(
+							new InvalidParamsError({
+								method: 'eth_getTransactionCount',
+								params: { address },
+								message: 'Address is required and must be a string',
+							}),
+						)
+					}
+					if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+						return yield* Effect.fail(
+							new InvalidParamsError({
+								method: 'eth_getTransactionCount',
+								params: { address },
+								message: `Invalid address format: ${address}. Must be a 40-character hex string prefixed with 0x`,
+							}),
+						)
+					}
+
+					// Validate blockTag - only 'latest' is supported
+					if (params.blockTag !== undefined && params.blockTag !== 'latest') {
+						return yield* Effect.fail(
+							new InvalidParamsError({
+								method: 'eth_getTransactionCount',
+								params: { blockTag: params.blockTag },
+								message: `Unsupported blockTag: ${String(params.blockTag)}. Only 'latest' is currently supported.`,
+							}),
+						)
+					}
+
+					// Get account from state manager
+					const account = yield* stateManager.getAccount(address.toLowerCase()).pipe(
+						Effect.mapError(
+							(e) =>
+								new InternalError({
+									message: `Failed to get account for transaction count: ${e instanceof Error ? e.message : String(e)}`,
+									meta: { address, operation: 'getAccount' },
+									cause: e,
+								}),
+						),
+					)
+
+					// Return nonce (default to 0 if account doesn't exist)
+					return account?.nonce ?? 0n
+				}),
+
+			getLogs: (_params) =>
+				Effect.gen(function* () {
+					// STUB: eth_getLogs requires ReceiptsManager which is not yet available in the Effect stack
+					// Full implementation requires:
+					// 1. ReceiptsManager service for tracking transaction receipts and logs
+					// 2. Fork handling for fetching historical logs from remote RPC
+					// 3. Block range iteration and log filtering
+					// For now, return empty array as a stub
+					// TODO: Implement full getLogs support when ReceiptsManager is available (#R134-P4-007)
+					return /** @type {import('./types.js').JsonRpcLog[]} */ ([])
+				}),
 		})
 	})
 ))
