@@ -22,7 +22,7 @@
  *
  * @typedef {Object} ImpersonationShape
  * @property {import('effect').Effect.Effect<Address | undefined>} getImpersonatedAccount - Get the currently impersonated account
- * @property {(address: Address | undefined) => import('effect').Effect.Effect<void>} setImpersonatedAccount - Set the impersonated account
+ * @property {(address: Address | undefined) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').InvalidParamsError>} setImpersonatedAccount - Set the impersonated account (validates address format)
  * @property {import('effect').Effect.Effect<boolean>} getAutoImpersonate - Get whether auto-impersonation is enabled
  * @property {(enabled: boolean) => import('effect').Effect.Effect<void>} setAutoImpersonate - Set auto-impersonation mode
  * @property {() => import('effect').Effect.Effect<ImpersonationShape>} deepCopy - Create a deep copy of the impersonation state
@@ -43,15 +43,15 @@
  *
  * @typedef {Object} BlockParamsShape
  * @property {import('effect').Effect.Effect<bigint | undefined>} getNextBlockTimestamp - Get the next block timestamp override
- * @property {(ts: bigint | undefined) => import('effect').Effect.Effect<void>} setNextBlockTimestamp - Set the next block timestamp override
+ * @property {(ts: bigint | undefined) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').InvalidParamsError>} setNextBlockTimestamp - Set the next block timestamp override (validates non-negative and max uint64)
  * @property {import('effect').Effect.Effect<bigint | undefined>} getNextBlockGasLimit - Get the next block gas limit override
- * @property {(gl: bigint | undefined) => import('effect').Effect.Effect<void>} setNextBlockGasLimit - Set the next block gas limit override
+ * @property {(gl: bigint | undefined) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').InvalidParamsError>} setNextBlockGasLimit - Set the next block gas limit override (validates non-negative and max uint64)
  * @property {import('effect').Effect.Effect<bigint | undefined>} getNextBlockBaseFeePerGas - Get the next block base fee per gas override
- * @property {(bf: bigint | undefined) => import('effect').Effect.Effect<void>} setNextBlockBaseFeePerGas - Set the next block base fee per gas override
+ * @property {(bf: bigint | undefined) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').InvalidParamsError>} setNextBlockBaseFeePerGas - Set the next block base fee per gas override (validates non-negative and max uint256)
  * @property {import('effect').Effect.Effect<bigint | undefined>} getMinGasPrice - Get the minimum gas price
- * @property {(price: bigint | undefined) => import('effect').Effect.Effect<void>} setMinGasPrice - Set the minimum gas price
+ * @property {(price: bigint | undefined) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').InvalidParamsError>} setMinGasPrice - Set the minimum gas price (validates non-negative and max uint256)
  * @property {import('effect').Effect.Effect<bigint | undefined>} getBlockTimestampInterval - Get the block timestamp interval
- * @property {(interval: bigint | undefined) => import('effect').Effect.Effect<void>} setBlockTimestampInterval - Set the block timestamp interval
+ * @property {(interval: bigint | undefined) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').InvalidParamsError>} setBlockTimestampInterval - Set the block timestamp interval (validates non-negative and max uint64)
  * @property {import('effect').Effect.Effect<void>} clearNextBlockOverrides - Clear all next block overrides (called after mining)
  * @property {() => import('effect').Effect.Effect<BlockParamsShape>} deepCopy - Create a deep copy of the block params state
  */

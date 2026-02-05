@@ -55,6 +55,30 @@ describe('FilterLive', () => {
 			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
 			expect(result).toEqual(['0x1', '0x2', '0x3'])
 		})
+
+		it('should fail with InvalidParamsError when topics array exceeds 4', async () => {
+			const program = Effect.gen(function* () {
+				const filter = yield* FilterService
+				// EVM allows maximum of 4 topics (1 event signature + 3 indexed params)
+				yield* filter.createLogFilter({
+					topics: [
+						'0x0000000000000000000000000000000000000000000000000000000000000001' as Hex,
+						'0x0000000000000000000000000000000000000000000000000000000000000002' as Hex,
+						'0x0000000000000000000000000000000000000000000000000000000000000003' as Hex,
+						'0x0000000000000000000000000000000000000000000000000000000000000004' as Hex,
+						'0x0000000000000000000000000000000000000000000000000000000000000005' as Hex,
+					],
+				})
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit) && exit.cause._tag === 'Fail') {
+				const error = exit.cause.error as { _tag: string; message: string }
+				expect(error._tag).toBe('InvalidParamsError')
+				expect(error.message).toContain('exceeds maximum of 4')
+			}
+		})
 	})
 
 	describe('createBlockFilter', () => {
@@ -430,6 +454,34 @@ describe('FilterLive', () => {
 				expect(error.message).toContain('not a log filter')
 			}
 		})
+
+		it('should fail with InvalidParamsError when log has more than 4 topics', async () => {
+			const program = Effect.gen(function* () {
+				const filter = yield* FilterService
+				const id = yield* filter.createLogFilter()
+				const log: FilterLog = {
+					address: '0x1234567890123456789012345678901234567890' as Hex,
+					blockHash: '0xabc' as Hex,
+					blockNumber: 1n,
+					data: '0x' as Hex,
+					logIndex: 0n,
+					removed: false,
+					// EVM allows maximum of 4 topics (1 event signature + 3 indexed params)
+					topics: ['0x1' as Hex, '0x2' as Hex, '0x3' as Hex, '0x4' as Hex, '0x5' as Hex],
+					transactionHash: '0x123' as Hex,
+					transactionIndex: 0n,
+				}
+				yield* filter.addLog(id, log)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(layer)))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit) && exit.cause._tag === 'Fail') {
+				const error = exit.cause.error as { _tag: string; message: string }
+				expect(error._tag).toBe('InvalidParamsError')
+				expect(error.message).toContain('exceeds maximum of 4')
+			}
+		})
 	})
 
 	describe('addBlock', () => {
@@ -546,6 +598,37 @@ describe('FilterLive', () => {
 
 			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
 			expect(result.size).toBe(3)
+		})
+
+		it('should deep copy logsCriteria with nested topics array', async () => {
+			const program = Effect.gen(function* () {
+				const filter = yield* FilterService
+				// Create log filter with topics as nested arrays (valid per Ethereum JSON-RPC spec for OR matching)
+				// This covers lines 525-532 in getAllFilters
+				yield* filter.createLogFilter({
+					topics: [
+						['0x0000000000000000000000000000000000000000000000000000000000000001' as Hex, '0x0000000000000000000000000000000000000000000000000000000000000002' as Hex],
+						'0x0000000000000000000000000000000000000000000000000000000000000003' as Hex,
+					],
+				})
+
+				const allFilters = yield* filter.getAllFilters
+				const logFilter = allFilters.get('0x1')
+				const topics = logFilter?.logsCriteria?.topics
+
+				return {
+					hasTopics: topics !== undefined,
+					isArray: Array.isArray(topics),
+					firstElementIsArray: Array.isArray(topics?.[0]),
+					firstElementLength: Array.isArray(topics?.[0]) ? topics[0].length : 0,
+				}
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result.hasTopics).toBe(true)
+			expect(result.isArray).toBe(true)
+			expect(result.firstElementIsArray).toBe(true)
+			expect(result.firstElementLength).toBe(2)
 		})
 	})
 
@@ -718,6 +801,45 @@ describe('FilterLive', () => {
 			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
 			expect(result.hasTopics).toBe(true)
 			expect(result.topicsValue).toBe('0x0000000000000000000000000000000000000000000000000000000000000001')
+		})
+
+		it('should deep copy logsCriteria with topics as array with nested arrays', async () => {
+			const program = Effect.gen(function* () {
+				const filter = yield* FilterService
+
+				// Create log filter with topics as nested arrays (valid per Ethereum JSON-RPC spec for OR matching)
+				// e.g., [[topic1, topic2], topic3] means (topic1 OR topic2) AND topic3
+				// This covers lines 526-527 where we check Array.isArray(t) for each topic element
+				const id = yield* filter.createLogFilter({
+					topics: [
+						['0x0000000000000000000000000000000000000000000000000000000000000001' as Hex, '0x0000000000000000000000000000000000000000000000000000000000000002' as Hex],
+						'0x0000000000000000000000000000000000000000000000000000000000000003' as Hex,
+					],
+				})
+
+				// Create deep copy
+				const copy = yield* filter.deepCopy()
+
+				// Get the filter from the copy
+				const copiedFilter = yield* copy.get(id)
+
+				// Verify nested array was deep copied
+				const topics = copiedFilter?.logsCriteria?.topics
+				return {
+					hasTopics: topics !== undefined,
+					isArray: Array.isArray(topics),
+					firstElementIsArray: Array.isArray(topics?.[0]),
+					firstElementLength: Array.isArray(topics?.[0]) ? topics[0].length : 0,
+					secondElement: topics?.[1],
+				}
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			expect(result.hasTopics).toBe(true)
+			expect(result.isArray).toBe(true)
+			expect(result.firstElementIsArray).toBe(true)
+			expect(result.firstElementLength).toBe(2)
+			expect(result.secondElement).toBe('0x0000000000000000000000000000000000000000000000000000000000000003')
 		})
 
 		it('should deep copy log.topics array to prevent shared references', async () => {

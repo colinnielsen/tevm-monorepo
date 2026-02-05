@@ -173,6 +173,80 @@ describe('ImpersonationLive', () => {
 		})
 	})
 
+	describe('address validation', () => {
+		it('should reject invalid address type', async () => {
+			const program = Effect.gen(function* () {
+				const impersonation = yield* ImpersonationService
+				// @ts-expect-error - testing runtime validation for non-string address
+				yield* impersonation.setImpersonatedAccount(12345)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(ImpersonationLive())))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit)) {
+				const error = exit.cause
+				expect(String(error)).toContain('Invalid address type')
+			}
+		})
+
+		it('should reject address without 0x prefix', async () => {
+			const program = Effect.gen(function* () {
+				const impersonation = yield* ImpersonationService
+				// @ts-expect-error - testing runtime validation for missing 0x prefix
+				yield* impersonation.setImpersonatedAccount('1234567890123456789012345678901234567890')
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(ImpersonationLive())))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit)) {
+				const error = exit.cause
+				expect(String(error)).toContain('Invalid address format')
+			}
+		})
+
+		it('should reject address with wrong length', async () => {
+			const program = Effect.gen(function* () {
+				const impersonation = yield* ImpersonationService
+				// @ts-expect-error - testing runtime validation for wrong length
+				yield* impersonation.setImpersonatedAccount('0x1234')
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(ImpersonationLive())))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit)) {
+				const error = exit.cause
+				expect(String(error)).toContain('Invalid address format')
+			}
+		})
+
+		it('should reject address with invalid hex characters', async () => {
+			const program = Effect.gen(function* () {
+				const impersonation = yield* ImpersonationService
+				// @ts-expect-error - testing runtime validation for invalid hex chars
+				yield* impersonation.setImpersonatedAccount('0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG')
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(ImpersonationLive())))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit)) {
+				const error = exit.cause
+				expect(String(error)).toContain('Invalid address format')
+			}
+		})
+
+		it('should normalize address to lowercase', async () => {
+			const mixedCaseAddress = '0xABCDEF1234567890ABCDEF1234567890ABCDEF12' as const
+			const program = Effect.gen(function* () {
+				const impersonation = yield* ImpersonationService
+				yield* impersonation.setImpersonatedAccount(mixedCaseAddress)
+				return yield* impersonation.getImpersonatedAccount
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(ImpersonationLive())))
+			expect(result).toBe(mixedCaseAddress.toLowerCase())
+		})
+	})
+
 	describe('concurrent access', () => {
 		it('should handle concurrent reads and writes', async () => {
 			const program = Effect.gen(function* () {

@@ -508,6 +508,28 @@ describe('SnapshotLive', () => {
 			expect(result.has('0x2')).toBe(true)
 			expect(result.has('0x3')).toBe(true)
 		})
+
+		it('should deep copy AccountStorage objects in getAllSnapshots', async () => {
+			const layerWithStorage = Layer.provide(SnapshotLive(), createMockStateManagerLayer(true))
+			const program = Effect.gen(function* () {
+				const snapshot = yield* SnapshotService
+				yield* snapshot.takeSnapshot()
+				const snapshots = yield* snapshot.getAllSnapshots
+				const firstSnapshot = snapshots.get('0x1')
+				return firstSnapshot
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(layerWithStorage)))
+			expect(result).toBeDefined()
+			expect(result!.stateRoot).toBeDefined()
+			// Verify the AccountStorage was deep copied with proper structure
+			const accountStorage = result!.state['0x1234567890123456789012345678901234567890']
+			expect(accountStorage).toBeDefined()
+			expect(accountStorage.nonce).toBe(1n)
+			expect(accountStorage.balance).toBe(1000000000000000000n)
+			expect(accountStorage.deployedBytecode).toBe('0x6080604052')
+			expect(accountStorage.storage).toBeDefined()
+		})
 	})
 
 	describe('revertToSnapshot', () => {

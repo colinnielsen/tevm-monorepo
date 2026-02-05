@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { Effect } from 'effect'
+import { Effect, Exit } from 'effect'
 import { BlockParamsService } from './BlockParamsService.js'
 import { BlockParamsLive } from './BlockParamsLive.js'
+
+const MAX_UINT64 = 18446744073709551615n
+const MAX_UINT256 = 115792089237316195423570985008687907853269984665640564039457584007913129639935n
 
 describe('BlockParamsLive', () => {
 	describe('layer creation', () => {
@@ -43,6 +46,18 @@ describe('BlockParamsLive', () => {
 
 			const result = await Effect.runPromise(program.pipe(Effect.provide(BlockParamsLive())))
 			expect(result).toBe(timestamp)
+		})
+
+		it('should clear timestamp by setting to undefined', async () => {
+			const program = Effect.gen(function* () {
+				const blockParams = yield* BlockParamsService
+				yield* blockParams.setNextBlockTimestamp(1700000000n)
+				yield* blockParams.setNextBlockTimestamp(undefined)
+				return yield* blockParams.getNextBlockTimestamp
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(BlockParamsLive())))
+			expect(result).toBeUndefined()
 		})
 
 		it('should use initial timestamp from options', async () => {
@@ -206,6 +221,85 @@ describe('BlockParamsLive', () => {
 			const result = await Effect.runPromise(program.pipe(Effect.provide(BlockParamsLive())))
 			expect(result.minGasPrice).toBe(1000000000n)
 			expect(result.interval).toBe(12n)
+		})
+	})
+
+	describe('bigint validation', () => {
+		it('should reject negative timestamp', async () => {
+			const program = Effect.gen(function* () {
+				const blockParams = yield* BlockParamsService
+				yield* blockParams.setNextBlockTimestamp(-1n)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(BlockParamsLive())))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit)) {
+				expect(String(exit.cause)).toContain('must be non-negative')
+			}
+		})
+
+		it('should reject timestamp exceeding max uint64', async () => {
+			const program = Effect.gen(function* () {
+				const blockParams = yield* BlockParamsService
+				yield* blockParams.setNextBlockTimestamp(MAX_UINT64 + 1n)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(BlockParamsLive())))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit)) {
+				expect(String(exit.cause)).toContain('exceeds maximum')
+			}
+		})
+
+		it('should reject negative gas limit', async () => {
+			const program = Effect.gen(function* () {
+				const blockParams = yield* BlockParamsService
+				yield* blockParams.setNextBlockGasLimit(-100n)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(BlockParamsLive())))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit)) {
+				expect(String(exit.cause)).toContain('must be non-negative')
+			}
+		})
+
+		it('should reject non-bigint type for timestamp', async () => {
+			const program = Effect.gen(function* () {
+				const blockParams = yield* BlockParamsService
+				// @ts-expect-error - testing runtime validation for non-bigint type
+				yield* blockParams.setNextBlockTimestamp(12345)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(BlockParamsLive())))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit)) {
+				expect(String(exit.cause)).toContain('expected bigint')
+			}
+		})
+
+		it('should reject base fee exceeding max uint256', async () => {
+			const program = Effect.gen(function* () {
+				const blockParams = yield* BlockParamsService
+				yield* blockParams.setNextBlockBaseFeePerGas(MAX_UINT256 + 1n)
+			})
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(BlockParamsLive())))
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit)) {
+				expect(String(exit.cause)).toContain('exceeds maximum')
+			}
+		})
+
+		it('should accept max uint64 value for timestamp', async () => {
+			const program = Effect.gen(function* () {
+				const blockParams = yield* BlockParamsService
+				yield* blockParams.setNextBlockTimestamp(MAX_UINT64)
+				return yield* blockParams.getNextBlockTimestamp
+			})
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(BlockParamsLive())))
+			expect(result).toBe(MAX_UINT64)
 		})
 	})
 

@@ -1,4 +1,5 @@
 import { Effect, Layer, Ref } from 'effect'
+import { InvalidParamsError } from '@tevm/errors-effect'
 import { ImpersonationService } from './ImpersonationService.js'
 
 /**
@@ -11,6 +12,43 @@ import { ImpersonationService } from './ImpersonationService.js'
  * @typedef {import('./types.js').ImpersonationLiveOptions} ImpersonationLiveOptions
  * @typedef {import('./types.js').Address} Address
  */
+
+/**
+ * Validates address format for impersonation.
+ * Accepts undefined (to clear impersonation) or a valid 40-character hex address with 0x prefix.
+ * Fix for #R148-P3-003: Validate address format before storing.
+ *
+ * @param {Address | undefined} address - The address to validate
+ * @returns {import('effect').Effect.Effect<Address | undefined, import('@tevm/errors-effect').InvalidParamsError, never>}
+ */
+const validateAddress = (address) =>
+	Effect.gen(function* () {
+		// Allow undefined to clear the impersonated account
+		if (address === undefined) {
+			return undefined
+		}
+		// Validate type
+		if (typeof address !== 'string') {
+			return yield* Effect.fail(
+				new InvalidParamsError({
+					method: 'anvil_impersonateAccount',
+					params: { address },
+					message: `Invalid address type: expected string, got ${typeof address}`,
+				}),
+			)
+		}
+		// Validate format: 0x prefix + 40 hex characters
+		if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+			return yield* Effect.fail(
+				new InvalidParamsError({
+					method: 'anvil_impersonateAccount',
+					params: { address },
+					message: `Invalid address format: ${address}. Must be a 40-character hex string prefixed with 0x`,
+				}),
+			)
+		}
+		return /** @type {Address} */ (address.toLowerCase())
+	})
 
 /**
  * Creates an ImpersonationService layer using Effect Refs for state management.
@@ -71,7 +109,10 @@ export const ImpersonationLive = (options = {}) => {
 				const shape = {
 					getImpersonatedAccount: Ref.get(accountRef),
 
-					setImpersonatedAccount: (address) => Ref.set(accountRef, address),
+					setImpersonatedAccount: (address) =>
+						validateAddress(address).pipe(
+							Effect.flatMap((validatedAddress) => Ref.set(accountRef, validatedAddress)),
+						),
 
 					getAutoImpersonate: Ref.get(autoRef),
 

@@ -1,4 +1,5 @@
 import { Effect, Layer, Ref } from 'effect'
+import { InvalidParamsError } from '@tevm/errors-effect'
 import { BlockParamsService } from './BlockParamsService.js'
 
 /**
@@ -10,6 +11,69 @@ import { BlockParamsService } from './BlockParamsService.js'
  * @typedef {import('./types.js').BlockParamsShape} BlockParamsShape
  * @typedef {import('./types.js').BlockParamsLiveOptions} BlockParamsLiveOptions
  */
+
+/**
+ * Maximum value for uint64 (2^64 - 1).
+ * Used for timestamp and gas limit validation.
+ * @type {bigint}
+ */
+const MAX_UINT64 = 18446744073709551615n
+
+/**
+ * Maximum value for uint256 (2^256 - 1).
+ * Used for wei-denominated values like gas price and base fee.
+ * @type {bigint}
+ */
+const MAX_UINT256 = 115792089237316195423570985008687907853269984665640564039457584007913129639935n
+
+/**
+ * Validates a bigint value is within bounds.
+ * Fix for #R148-P3-004: Add bounds checking for bigint values.
+ *
+ * @param {bigint | undefined} value - The value to validate
+ * @param {string} paramName - Parameter name for error messages
+ * @param {bigint} maxValue - Maximum allowed value
+ * @param {string} method - Method name for error messages
+ * @returns {import('effect').Effect.Effect<bigint | undefined, import('@tevm/errors-effect').InvalidParamsError, never>}
+ */
+const validateBigInt = (value, paramName, maxValue, method = 'anvil_setBlockParam') =>
+	Effect.gen(function* () {
+		// Allow undefined to clear the override
+		if (value === undefined) {
+			return undefined
+		}
+		// Validate type
+		if (typeof value !== 'bigint') {
+			return yield* Effect.fail(
+				new InvalidParamsError({
+					method,
+					params: { [paramName]: value },
+					message: `Invalid ${paramName} type: expected bigint, got ${typeof value}`,
+				}),
+			)
+		}
+		// Validate non-negative
+		if (value < 0n) {
+			return yield* Effect.fail(
+				new InvalidParamsError({
+					method,
+					params: { [paramName]: value },
+					message: `Invalid ${paramName}: value must be non-negative, got ${value}`,
+				}),
+			)
+		}
+		// Validate upper bound
+		if (value > maxValue) {
+			return yield* Effect.fail(
+				new InvalidParamsError({
+					method,
+					params: { [paramName]: value },
+					message: `Invalid ${paramName}: value exceeds maximum (${maxValue}), got ${value}`,
+				}),
+			)
+		}
+		return value
+	})
 
 /**
  * Creates a BlockParamsService layer using Effect Refs for state management.
@@ -81,19 +145,34 @@ export const BlockParamsLive = (options = {}) => {
 				/** @type {BlockParamsShape} */
 				const shape = {
 					getNextBlockTimestamp: Ref.get(timestampRef),
-					setNextBlockTimestamp: (ts) => Ref.set(timestampRef, ts),
+					setNextBlockTimestamp: (ts) =>
+						validateBigInt(ts, 'timestamp', MAX_UINT64, 'evm_setNextBlockTimestamp').pipe(
+							Effect.flatMap((validated) => Ref.set(timestampRef, validated)),
+						),
 
 					getNextBlockGasLimit: Ref.get(gasLimitRef),
-					setNextBlockGasLimit: (gl) => Ref.set(gasLimitRef, gl),
+					setNextBlockGasLimit: (gl) =>
+						validateBigInt(gl, 'gasLimit', MAX_UINT64, 'evm_setBlockGasLimit').pipe(
+							Effect.flatMap((validated) => Ref.set(gasLimitRef, validated)),
+						),
 
 					getNextBlockBaseFeePerGas: Ref.get(baseFeeRef),
-					setNextBlockBaseFeePerGas: (bf) => Ref.set(baseFeeRef, bf),
+					setNextBlockBaseFeePerGas: (bf) =>
+						validateBigInt(bf, 'baseFeePerGas', MAX_UINT256, 'anvil_setNextBlockBaseFeePerGas').pipe(
+							Effect.flatMap((validated) => Ref.set(baseFeeRef, validated)),
+						),
 
 					getMinGasPrice: Ref.get(gasPriceRef),
-					setMinGasPrice: (price) => Ref.set(gasPriceRef, price),
+					setMinGasPrice: (price) =>
+						validateBigInt(price, 'minGasPrice', MAX_UINT256, 'anvil_setMinGasPrice').pipe(
+							Effect.flatMap((validated) => Ref.set(gasPriceRef, validated)),
+						),
 
 					getBlockTimestampInterval: Ref.get(intervalRef),
-					setBlockTimestampInterval: (interval) => Ref.set(intervalRef, interval),
+					setBlockTimestampInterval: (interval) =>
+						validateBigInt(interval, 'blockTimestampInterval', MAX_UINT64, 'anvil_setBlockTimestampInterval').pipe(
+							Effect.flatMap((validated) => Ref.set(intervalRef, validated)),
+						),
 
 					// Use Effect.all to batch Ref updates atomically (Issue #292 fix)
 					// This prevents inconsistent state if fiber is interrupted between individual Ref.set calls

@@ -32,14 +32,29 @@ const bytesToHex32 = (bytes) => {
 }
 
 /**
+ * Validates that a string contains only valid hexadecimal characters.
+ * Fix for #R148-P3-009: Validate hex format before parsing.
+ * @param {string} str - The string to validate (without 0x prefix)
+ * @returns {boolean} True if valid hex, false otherwise
+ */
+const isValidHex = (str) => /^[0-9a-fA-F]*$/.test(str)
+
+/**
  * Converts a hex string to Uint8Array
  * @param {string} hex - Hex string to convert
  * @param {Object} [options] - Conversion options
  * @param {number} [options.size] - Expected size in bytes
  * @returns {Uint8Array} - Byte array
+ * @throws {Error} If hex string contains invalid characters (Fix for #R148-P3-009)
  */
 const hexToBytes = (hex, options) => {
 	const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex
+	// Validate hex characters BEFORE parsing to prevent silent NaN corruption (Fix for #R148-P3-009)
+	/* c8 ignore start - defensive code: validatePosition already validates hex format */
+	if (!isValidHex(cleanHex)) {
+		throw new Error(`Invalid hex string: ${hex}. Contains non-hexadecimal characters.`)
+	}
+	/* c8 ignore stop */
 	// Normalize odd-length hex strings by left-padding with a single '0'
 	// This prevents silent data truncation (e.g., "0xabc" becomes "0abc" -> [0x0a, 0xbc])
 	const normalizedHex = cleanHex.length % 2 === 1 ? '0' + cleanHex : cleanHex
