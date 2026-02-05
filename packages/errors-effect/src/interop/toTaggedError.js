@@ -137,21 +137,33 @@ const errorMap = {
  * @returns {import('./toTaggedError.types.js').TevmTaggedErrorUnion} A TaggedError instance with type narrowing based on input
  */
 export const toTaggedError = /** @type {import('./toTaggedError.types.js').toTaggedError} */ ((error) => {
-	// If it's already a TevmError TaggedError, return as-is
-	if (error instanceof TevmError) {
-		return error
-	}
+	// #R149-P1-002 fix: Use _tag property check combined with Error instance check
+	// to work across module boundaries while still ensuring proper Error instances are returned
+	//
+	// instanceof checks for specific error classes fail when error classes are imported from
+	// different module instances because each instance has its own distinct prototype.
+	// However, we CAN check if it's an Error instance (base class) which works reliably.
+	//
+	// Strategy:
+	// 1. If it's an Error with a known _tag, it's already a proper tagged error - return as-is
+	// 2. If it's just a plain object with _tag, convert it to a proper Error instance
+	if (error && typeof error === 'object' && '_tag' in error && error instanceof Error) {
+		const tag = /** @type {string} */ (error._tag)
 
-	// Check if already a known TaggedError type from this package
-	// Note: We check using Object.values since instanceof checks work for
-	// errors that were created with these exact constructors
-	for (const ErrorClass of Object.values(errorMap)) {
-		if (error instanceof ErrorClass) {
+		// If it's already a TevmError TaggedError, return as-is
+		if (tag === 'TevmError') {
+			return error
+		}
+
+		// Check if already a known TaggedError type from this package
+		// The instanceof Error check above ensures it's an actual Error instance
+		if (tag in errorMap) {
 			return error
 		}
 	}
 
 	// Handle BaseError from @tevm/errors (has _tag property but is not an Effect TaggedError)
+	// This also handles plain objects with _tag that need to be converted to proper Error instances
 	if (error && typeof error === 'object' && '_tag' in error) {
 		const baseError = /** @type {import('@tevm/errors').BaseError & Record<string, unknown>} */ (error)
 		const tag = baseError._tag

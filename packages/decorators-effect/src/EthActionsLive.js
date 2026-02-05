@@ -416,10 +416,23 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 						return /** @type {`0x${string}`} */ (hex)
 					}
 
+					// #R149-P4-005 fix: Safe hash getter - wrap hash() calls in try-catch to prevent crashes from malformed data
+					const safeHash = (/** @type {{ hash?: () => Uint8Array }} */ obj) => {
+						if (!obj || typeof obj.hash !== 'function') return null
+						try {
+							return bytesToHex(obj.hash())
+						} catch {
+							// Malformed transaction/block/uncle - return null instead of crashing
+							return null
+						}
+					}
+
 					const header = block.header
+					// #R149-P4-005 fix: Use safeHash for block hash to prevent crashes
+					const blockHash = safeHash(block)
 					return /** @type {import('./types.js').JsonRpcBlock} */ ({
 						number: `0x${header.number.toString(16)}`,
-						hash: bytesToHex(block.hash()),
+						hash: blockHash ?? '0x',
 						parentHash: bytesToHex(header.parentHash),
 						nonce: bytesToHex(header.nonce),
 						sha3Uncles: bytesToHex(header.uncleHash),
@@ -471,6 +484,7 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 								}
 								// #R148-P4-002 fix: For typed transactions (type > 0), compute yParity from v value
 								// yParity is 0 or 1, derived from v. For EIP-2930/1559/4844, v is 0 or 1 directly (or 27/28 legacy encoding)
+								// #R149-P4-006 fix: Handle EIP-155 v values where v = chainId * 2 + 35 + yParity
 								const computeYParity = () => {
 									if (tx.type === 0) return undefined // Legacy transactions don't use yParity
 									const v = txJSON.v ? BigInt(txJSON.v) : 0n
@@ -478,18 +492,24 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 									// Some implementations may still use 27/28 encoding
 									if (v === 0n || v === 27n) return '0x0'
 									if (v === 1n || v === 28n) return '0x1'
-									// Fallback: compute v % 2
+									// EIP-155 v values: v = chainId * 2 + 35 + yParity
+									// For v > 36, use (v - 35) % 2 to extract yParity correctly
+									if (v > 36n) {
+										return `0x${((v - 35n) % 2n).toString(16)}`
+									}
+									// Fallback for other cases: compute v % 2
 									return `0x${(v % 2n).toString(16)}`
 								}
 								const yParity = computeYParity()
 								return /** @type {object} */ ({
-									blockHash: bytesToHex(block.hash()),
+									// #R149-P4-005 fix: Use cached blockHash to avoid repeated hash() calls
+									blockHash: blockHash ?? '0x',
 									blockNumber: `0x${header.number.toString(16)}`,
 									from: /** @type {`0x${string}`} */ (from),
 									gas: /** @type {`0x${string}`} */ (txJSON.gasLimit ?? '0x0'),
 									gasPrice: /** @type {`0x${string}`} */ (txJSON.gasPrice ?? txJSON.maxFeePerGas ?? '0x0'),
-									// #R146-P4-002 fix: Return null for missing tx hash (not '0x' which is invalid per JSON-RPC spec)
-									hash: tx.hash ? bytesToHex(tx.hash()) : null,
+									// #R149-P4-005 fix: Use safeHash to prevent crashes from malformed transactions
+									hash: safeHash(tx),
 									input: /** @type {`0x${string}`} */ (txJSON.data ?? '0x'),
 									nonce: /** @type {`0x${string}`} */ (txJSON.nonce ?? '0x0'),
 									to: txJSON.to ? /** @type {`0x${string}`} */ (String(txJSON.to)) : null,
@@ -510,9 +530,10 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 									...(txJSON.blobVersionedHashes !== undefined ? { blobVersionedHashes: txJSON.blobVersionedHashes } : {}),
 								})
 							})
-							// #R146-P4-002 fix: Return null for missing tx hash (not '0x' which is invalid per JSON-RPC spec)
-							: block.transactions.map((tx) => tx.hash ? bytesToHex(tx.hash()) : null),
-						uncles: block.uncleHeaders?.map((uncle) => bytesToHex(uncle.hash())) ?? [],
+							// #R149-P4-005 fix: Use safeHash to prevent crashes from malformed transactions
+							: block.transactions.map((tx) => safeHash(tx)),
+						// #R149-P4-005 fix: Use safeHash for uncle hashes to prevent crashes
+						uncles: block.uncleHeaders?.map((uncle) => safeHash(uncle)) ?? [],
 					})
 				}),
 
@@ -539,10 +560,23 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 						return /** @type {`0x${string}`} */ (hex)
 					}
 
+					// #R149-P4-005 fix: Safe hash getter - wrap hash() calls in try-catch to prevent crashes from malformed data
+					const safeHash = (/** @type {{ hash?: () => Uint8Array }} */ obj) => {
+						if (!obj || typeof obj.hash !== 'function') return null
+						try {
+							return bytesToHex(obj.hash())
+						} catch {
+							// Malformed transaction/block/uncle - return null instead of crashing
+							return null
+						}
+					}
+
 					const header = block.header
+					// #R149-P4-005 fix: Use safeHash for block hash to prevent crashes
+					const blockHash = safeHash(block)
 					return /** @type {import('./types.js').JsonRpcBlock} */ ({
 						number: `0x${header.number.toString(16)}`,
-						hash: bytesToHex(block.hash()),
+						hash: blockHash ?? '0x',
 						parentHash: bytesToHex(header.parentHash),
 						nonce: bytesToHex(header.nonce),
 						sha3Uncles: bytesToHex(header.uncleHash),
@@ -594,6 +628,7 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 								}
 								// #R148-P4-002 fix: For typed transactions (type > 0), compute yParity from v value
 								// yParity is 0 or 1, derived from v. For EIP-2930/1559/4844, v is 0 or 1 directly (or 27/28 legacy encoding)
+								// #R149-P4-006 fix: Handle EIP-155 v values where v = chainId * 2 + 35 + yParity
 								const computeYParity = () => {
 									if (tx.type === 0) return undefined // Legacy transactions don't use yParity
 									const v = txJSON.v ? BigInt(txJSON.v) : 0n
@@ -601,18 +636,24 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 									// Some implementations may still use 27/28 encoding
 									if (v === 0n || v === 27n) return '0x0'
 									if (v === 1n || v === 28n) return '0x1'
-									// Fallback: compute v % 2
+									// EIP-155 v values: v = chainId * 2 + 35 + yParity
+									// For v > 36, use (v - 35) % 2 to extract yParity correctly
+									if (v > 36n) {
+										return `0x${((v - 35n) % 2n).toString(16)}`
+									}
+									// Fallback for other cases: compute v % 2
 									return `0x${(v % 2n).toString(16)}`
 								}
 								const yParity = computeYParity()
 								return /** @type {object} */ ({
-									blockHash: bytesToHex(block.hash()),
+									// #R149-P4-005 fix: Use cached blockHash to avoid repeated hash() calls
+									blockHash: blockHash ?? '0x',
 									blockNumber: `0x${header.number.toString(16)}`,
 									from: /** @type {`0x${string}`} */ (from),
 									gas: /** @type {`0x${string}`} */ (txJSON.gasLimit ?? '0x0'),
 									gasPrice: /** @type {`0x${string}`} */ (txJSON.gasPrice ?? txJSON.maxFeePerGas ?? '0x0'),
-									// #R146-P4-002 fix: Return null for missing tx hash (not '0x' which is invalid per JSON-RPC spec)
-									hash: tx.hash ? bytesToHex(tx.hash()) : null,
+									// #R149-P4-005 fix: Use safeHash to prevent crashes from malformed transactions
+									hash: safeHash(tx),
 									input: /** @type {`0x${string}`} */ (txJSON.data ?? '0x'),
 									nonce: /** @type {`0x${string}`} */ (txJSON.nonce ?? '0x0'),
 									to: txJSON.to ? /** @type {`0x${string}`} */ (String(txJSON.to)) : null,
@@ -633,9 +674,10 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 									...(txJSON.blobVersionedHashes !== undefined ? { blobVersionedHashes: txJSON.blobVersionedHashes } : {}),
 								})
 							})
-							// #R146-P4-002 fix: Return null for missing tx hash (not '0x' which is invalid per JSON-RPC spec)
-							: block.transactions.map((tx) => tx.hash ? bytesToHex(tx.hash()) : null),
-						uncles: block.uncleHeaders?.map((uncle) => bytesToHex(uncle.hash())) ?? [],
+							// #R149-P4-005 fix: Use safeHash to prevent crashes from malformed transactions
+							: block.transactions.map((tx) => safeHash(tx)),
+						// #R149-P4-005 fix: Use safeHash for uncle hashes to prevent crashes
+						uncles: block.uncleHeaders?.map((uncle) => safeHash(uncle)) ?? [],
 					})
 				}),
 

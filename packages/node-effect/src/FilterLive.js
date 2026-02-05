@@ -355,18 +355,105 @@ export const FilterLive = () => {
 
 					addLog: (/** @type {Hex} */ id, /** @type {FilterLog} */ log) =>
 						Effect.gen(function* () {
-							// #R148-P3-001 fix: Validate log topics array length per EVM specification
-							if (log.topics && log.topics.length > 4) {
+							// #R149-P3-004 fix: Check filter existence and type BEFORE validating parameters
+							// This ensures InvalidFilterTypeError is returned before InvalidParamsError
+							// when adding to a non-log filter, matching expected behavior in tests
+							const filterMap = yield* Ref.get(fltrRef)
+							const existingFilter = filterMap.get(id)
+
+							if (!existingFilter) {
 								return yield* Effect.fail(
-									new InvalidParamsError({
-										method: 'addLog',
-										params: { topics: log.topics },
-										message: `Log topics array length ${log.topics.length} exceeds maximum of 4 per EVM specification.`,
+									new FilterNotFoundError({
+										filterId: id,
+										message: `Filter with id ${id} not found`,
 									}),
 								)
 							}
 
-							// Atomic check-and-update using Ref.modify to prevent TOCTOU race
+							if (existingFilter.type !== 'Log') {
+								return yield* Effect.fail(
+									new InvalidFilterTypeError({
+										filterId: id,
+										expectedType: 'Log',
+										message: `Filter ${id} is not a log filter`,
+									}),
+								)
+							}
+
+							// #R149-P3-003 fix: Validate address before storage
+							// Address must be a 20-byte hex string (0x + 40 hex chars)
+							if (log.address !== undefined && log.address !== null) {
+								if (typeof log.address !== 'string') {
+									return yield* Effect.fail(
+										new InvalidParamsError({
+											method: 'addLog',
+											params: { address: log.address },
+											message: `Log address must be a string, got ${typeof log.address}`,
+										}),
+									)
+								}
+								if (!/^0x[a-fA-F0-9]{40}$/.test(log.address)) {
+									return yield* Effect.fail(
+										new InvalidParamsError({
+											method: 'addLog',
+											params: { address: log.address },
+											message: `Invalid log address format: ${log.address}. Must be a 40-character hex string prefixed with 0x`,
+										}),
+									)
+								}
+							}
+
+							// #R149-P3-002 fix: Validate topics is an array before checking length
+							if (log.topics !== undefined && log.topics !== null) {
+								if (!Array.isArray(log.topics)) {
+									return yield* Effect.fail(
+										new InvalidParamsError({
+											method: 'addLog',
+											params: { topics: log.topics },
+											message: `Log topics must be an array, got ${typeof log.topics}`,
+										}),
+									)
+								}
+								// #R148-P3-001 fix: Validate log topics array length per EVM specification
+								if (log.topics.length > 4) {
+									return yield* Effect.fail(
+										new InvalidParamsError({
+											method: 'addLog',
+											params: { topics: log.topics },
+											message: `Log topics array length ${log.topics.length} exceeds maximum of 4 per EVM specification.`,
+										}),
+									)
+								}
+								// #R149-P3-001 fix: Validate individual topic entries
+								for (let i = 0; i < log.topics.length; i++) {
+									const topic = log.topics[i]
+									// Topics can be null (wildcard) or a 32-byte hex string
+									if (topic !== null && topic !== undefined) {
+										if (typeof topic !== 'string') {
+											return yield* Effect.fail(
+												new InvalidParamsError({
+													method: 'addLog',
+													params: { topic, index: i },
+													message: `Topic at index ${i} must be a string or null, got ${typeof topic}`,
+												}),
+											)
+										}
+										// Topic must be 0x + 64 hex chars (32 bytes)
+										if (!/^0x[a-fA-F0-9]{64}$/.test(topic)) {
+											return yield* Effect.fail(
+												new InvalidParamsError({
+													method: 'addLog',
+													params: { topic, index: i },
+													message: `Topic at index ${i} has invalid format: ${topic}. Must be a 64-character hex string prefixed with 0x (32 bytes)`,
+												}),
+											)
+										}
+									}
+								}
+							}
+
+							// Atomic update using Ref.modify - filter existence/type was already checked above
+							// but we re-check atomically to handle race conditions where filter was removed/changed
 							/**
 							 * @type {{ found: boolean; wrongType: boolean }}
 							 */
@@ -381,11 +468,14 @@ export const FilterLive = () => {
 								}
 								const newMap = new Map(map)
 								// #R144-P3-001 fix: Deep copy log to prevent external mutation after adding
-								const logCopy = { ...log, topics: [...log.topics] }
+								// #R149-P3-002 fix: Safely handle topics - use empty array if not an array
+								const topicsCopy = Array.isArray(log.topics) ? [...log.topics] : []
+								const logCopy = { ...log, topics: topicsCopy }
 								newMap.set(id, { ...filter, logs: [...filter.logs, logCopy] })
 								return /** @type {const} */ ([{ found: true, wrongType: false }, newMap])
 							})
 
+							// Handle race condition where filter was removed/changed between check and update
 							if (!result.found) {
 								return yield* Effect.fail(
 									new FilterNotFoundError({

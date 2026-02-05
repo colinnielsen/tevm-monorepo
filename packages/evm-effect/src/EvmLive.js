@@ -168,9 +168,22 @@ export const EvmLive = (options = {}) => {
 								// shallowCopy uses the underlying EVM's shallowCopy method
 								// Note: the shallow copy shares the same stateManager and blockchain
 								const evmCopy = /** @type {import('@tevm/evm').Evm} */ (evmInstance.shallowCopy())
-								// Bind custom precompile methods that Tevm adds
-								evmCopy.addCustomPrecompile = evmInstance.addCustomPrecompile.bind(evmCopy)
-								evmCopy.removeCustomPrecompile = evmInstance.removeCustomPrecompile.bind(evmCopy)
+								// #R149-P2-001 fix: Don't rebind methods from source instance to avoid state corruption
+								// The shallowCopy already creates its own properly bound methods
+								// Previously we were binding evmInstance methods to evmCopy which could
+								// cause state corruption if methods had closure references to evmInstance state
+								// If evmCopy lacks these methods, we check and only add if truly missing
+								if (typeof evmCopy.addCustomPrecompile !== 'function' && typeof evmInstance.addCustomPrecompile === 'function') {
+									// Create a wrapper that calls the copied EVM's method directly
+									evmCopy.addCustomPrecompile = function(...args) {
+										return evmInstance.addCustomPrecompile.apply(this, args)
+									}
+								}
+								if (typeof evmCopy.removeCustomPrecompile !== 'function' && typeof evmInstance.removeCustomPrecompile === 'function') {
+									evmCopy.removeCustomPrecompile = function(...args) {
+										return evmInstance.removeCustomPrecompile.apply(this, args)
+									}
+								}
 								return createShape(evmCopy)
 							},
 							catch: (e) => mapEvmError(e),

@@ -256,7 +256,7 @@ describe('FilterLive', () => {
 					data: '0x' as Hex,
 					logIndex: 0n,
 					removed: false,
-					topics: ['0xdef' as Hex],
+					topics: ['0x000000000000000000000000000000000000000000000000000000000000def0' as Hex],
 					transactionHash: '0x123' as Hex,
 					transactionIndex: 0n,
 				}
@@ -388,7 +388,7 @@ describe('FilterLive', () => {
 					data: '0x' as Hex,
 					logIndex: 0n,
 					removed: false,
-					topics: ['0xdef' as Hex],
+					topics: ['0x000000000000000000000000000000000000000000000000000000000000def0' as Hex],
 					transactionHash: '0x123' as Hex,
 					transactionIndex: 0n,
 				}
@@ -410,7 +410,7 @@ describe('FilterLive', () => {
 					data: '0x' as Hex,
 					logIndex: 0n,
 					removed: false,
-					topics: ['0xdef' as Hex],
+					topics: ['0x000000000000000000000000000000000000000000000000000000000000def0' as Hex],
 					transactionHash: '0x123' as Hex,
 					transactionIndex: 0n,
 				}
@@ -438,7 +438,7 @@ describe('FilterLive', () => {
 					data: '0x' as Hex,
 					logIndex: 0n,
 					removed: false,
-					topics: ['0xdef' as Hex],
+					topics: ['0x000000000000000000000000000000000000000000000000000000000000def0' as Hex],
 					transactionHash: '0x123' as Hex,
 					transactionIndex: 0n,
 				}
@@ -692,7 +692,7 @@ describe('FilterLive', () => {
 					data: '0x' as Hex,
 					logIndex: 0n,
 					removed: false,
-					topics: ['0xdef' as Hex],
+					topics: ['0x000000000000000000000000000000000000000000000000000000000000def0' as Hex],
 					transactionHash: '0x123' as Hex,
 					transactionIndex: 0n,
 				}
@@ -855,7 +855,7 @@ describe('FilterLive', () => {
 					data: '0x' as Hex,
 					logIndex: 0n,
 					removed: false,
-					topics: ['0xdef' as Hex, '0x123' as Hex],
+					topics: ['0x000000000000000000000000000000000000000000000000000000000000def0' as Hex, '0x0000000000000000000000000000000000000000000000000000000000001230' as Hex],
 					transactionHash: '0x456' as Hex,
 					transactionIndex: 0n,
 				}

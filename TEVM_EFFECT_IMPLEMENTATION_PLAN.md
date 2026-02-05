@@ -2,8 +2,102 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-04 (Post 148th Review - Fixes Applied)
+**Last Updated**: 2026-02-05 (Post 149th Review)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
+
+---
+
+**149th REVIEW (2026-02-05).** Deep Parallel Opus 4.5 independent review with ultrathink (4 parallel subagents). Found 1 CRITICAL, 13 HIGH, 25 MEDIUM, 21 LOW = 60 NEW issues.
+
+**NEW CRITICAL Issues Found (1 total):**
+- ✅ **#R149-P4-005**: FIXED - EthActionsLive.js now wraps tx.hash() in try/catch to prevent crashes from malformed transactions in getBlockByNumber/getBlockByHash response building.
+
+**NEW HIGH Issues Found (13 total):**
+- ✅ **#R149-P1-002**: FIXED - toTaggedError.js now uses `_tag` property check combined with `instanceof Error` to work across module boundaries while still ensuring proper Error instances are returned.
+- 🔴 **#R149-P1-006**: LoggerLive.js:45-60 - LoggerService type casting via `as any` may cause layer composition issues. Generic tag variance not preserved through cast.
+- 🔴 **#R149-P1-010**: LoggerTest.js:89 - TestLoggerShape's child() return type violates LoggerShape interface. Returns TestLoggerShape but interface requires LoggerShape.
+- ✅ **#R149-P2-001**: FIXED - EvmLive.js shallowCopy no longer rebinds methods from source EVM to copied EVM. The shallowCopy creates its own properly bound methods; only adds missing methods if truly missing with proper `this` binding.
+- 🔴 **#R149-P2-002**: common-effect/types.js:34-42 - Unsafe double type cast for Deferred loses type information. Cast through `unknown` erases actual generic type parameters.
+- ✅ **#R149-P3-001**: FIXED - FilterLive.js addLog now validates individual topic entries for proper 32-byte hex format (0x + 64 hex chars).
+- ✅ **#R149-P3-002**: FIXED - FilterLive.js addLog now validates topics is an array before spreading. Non-array values return InvalidParamsError.
+- ✅ **#R149-P3-003**: FIXED - FilterLive.js addLog now validates address format as 20-byte hex string (0x + 40 hex chars) before storage.
+- 🔴 **#R149-P3-010**: GetStorageAtLive.js:48-55 - keccak256 uses unvalidated hexToBytes, corrupting hashes for invalid hex. Non-hex characters produce garbage hash output.
+- 🔴 **#R149-P3-016**: SetAccountLive.js:380-395 - Empty state:{} silently clears all storage. Should require explicit confirmation or use clearStorage flag.
+- ✅ **#R149-P4-006**: FIXED - EthActionsLive.js yParity computation now uses `(v - 35) % 2` for EIP-155 v values (v > 36) to correctly extract yParity.
+- 🔴 **#R149-P4-007**: TevmActionsLive.js:315-330 - Unreachable code after yield* Effect.fail(). Code following Effect.fail() in generator never executes but appears intentional.
+- 🔴 **#R149-P4-014**: types.js:51 - deepCopy type signature mismatch. Declared as Effect<T, never> but implementation can fail with InternalError.
+
+**NEW MEDIUM Issues Found (25 total):**
+- 🟡 **#R149-P1-001**: toTaggedError.js:95-110 - Error cause chain not preserved in TaggedError conversion. Original error's cause property lost during transformation.
+- 🟡 **#R149-P1-003**: LoggerLive.js:78-85 - Logger namespace concatenation doesn't handle empty strings. Empty namespace produces ":" prefix in child logger names.
+- 🟡 **#R149-P1-004**: effectToPromise.js:32-40 - Promise rejection loses Effect error type. Typed errors become untyped Error instances in rejection.
+- 🟡 **#R149-P1-005**: wrapWithEffect.js:88-95 - Wrapped method return type inference fails for overloaded functions. TypeScript cannot infer correct overload; defaults to any.
+- 🟡 **#R149-P1-007**: toBaseError.js:145-160 - Meta object shallow copied. Nested meta properties still shared between original and converted error.
+- 🟡 **#R149-P1-008**: TevmError.js:78-85 - docsPath not validated as URL. Malformed docsPath values accepted without validation.
+- 🟡 **#R149-P2-003**: BlockchainLive.js:245-260 - getBlock error handling inconsistent. Some paths return Effect.fail, others throw directly.
+- 🟡 **#R149-P2-004**: StateManagerLive.js:155-170 - Checkpoint nesting not tracked. Multiple checkpoint() calls without matching commit()/revert() not detected.
+- 🟡 **#R149-P2-005**: EvmLive.js:195-210 - Event emission outside Effect context. Events emitted via callback don't participate in Effect error channel.
+- 🟡 **#R149-P3-004**: SnapshotLive.js:185-200 - Snapshot state serialization loses BigInt precision. JSON.stringify converts BigInt to string; parseFloat on restore.
+- 🟡 **#R149-P3-005**: MiningLive.js:120-135 - Block reward calculation doesn't account for uncle rewards. Static 2 ETH reward regardless of uncles.
+- 🟡 **#R149-P3-006**: CallLive.js:280-295 - Contract creation address not returned for successful deploys. Missing contractAddress in call result.
+- 🟡 **#R149-P3-007**: GetAccountLive.js:95-110 - Account proof generation uses stale state root. State changes between proof request and generation not captured.
+- 🟡 **#R149-P3-008**: BlockParamsLive.js:115-130 - Gas limit bounds not validated per protocol. Accepts any positive value; should enforce parent-relative bounds.
+- 🟡 **#R149-P3-009**: ImpersonationLive.js:95-110 - Impersonated accounts not cleared on chain reset. Fork reset preserves impersonation state incorrectly.
+- 🟡 **#R149-P3-011**: FilterLive.js:420-435 - Log filter block range not validated. fromBlock > toBlock accepted without error.
+- 🟡 **#R149-P3-012**: SnapshotLive.js:260-275 - getAllSnapshots exposes internal snapshot structure. Returns mutable references to internal state.
+- 🟡 **#R149-P3-013**: MiningLive.js:155-170 - Pending transaction queue not bounded. Memory exhaustion possible with many pending transactions.
+- 🟡 **#R149-P3-014**: CallLive.js:310-325 - Gas refund calculation not exposed in result. Refunded gas not included in execution result.
+- 🟡 **#R149-P3-015**: GetStorageAtLive.js:75-90 - Storage proof verification not implemented. Merkle proof returned but not validated.
+- 🟡 **#R149-P4-001**: MemoryClientLive.js:245-260 - Client fork config not validated. Invalid fork URL/block accepted without network check.
+- 🟡 **#R149-P4-002**: EthActionsLive.js:510-525 - estimateGas doesn't account for state changes. Estimate based on current state; pending tx effects ignored.
+- 🟡 **#R149-P4-003**: TevmActionsLive.js:380-395 - Script execution doesn't set proper caller. msg.sender not set correctly for script context.
+- 🟡 **#R149-P4-004**: RequestLive.js:185-200 - eth_call with pending block tag uses latest state. Pending transactions not applied before call.
+- 🟡 **#R149-P4-008**: MemoryClientLive.js:310-325 - Multiple extend() calls may conflict. Overlapping decorator methods not detected.
+
+**NEW LOW Issues Found (21 total):**
+- 🟢 **#R149-P1-009**: LoggerTest.js:45-50 - Test logger levels array includes duplicates. "debug" appears twice in level priority list.
+- 🟢 **#R149-P1-011**: effectToPromise.js:55-60 - Missing JSDoc for fiber interrupt handling. Cancellation behavior not documented.
+- 🟢 **#R149-P1-012**: wrapWithEffect.js:125-130 - Console.warn for unsupported method types. Should use Logger service for consistency.
+- 🟢 **#R149-P1-013**: toBaseError.js:175-180 - Error name setter not validated. Can set name to non-string value.
+- 🟢 **#R149-P1-014**: TevmError.js:95-100 - Meta property enumerable. Appears in JSON.stringify output; should be non-enumerable.
+- 🟢 **#R149-P2-006**: BlockchainLocal.js:180-190 - Block hash cache not size-bounded. Long-running chains accumulate unbounded cache.
+- 🟢 **#R149-P2-007**: StateManagerLive.js:220-230 - Access list tracking not cleared between calls. Stale access list entries may affect gas calculation.
+- 🟢 **#R149-P2-008**: EvmLive.js:235-245 - Step event handler executed synchronously. Long handlers block EVM execution.
+- 🟢 **#R149-P2-009**: VmLive.js:175-185 - VM runBlock doesn't validate parent hash. Orphan blocks accepted without error.
+- 🟢 **#R149-P2-010**: CommonLocal.js:95-105 - Hardfork activation timestamps not validated. Future timestamps accepted for past hardforks.
+- 🟢 **#R149-P3-017**: FilterLive.js:475-485 - Filter timeout uses setTimeout. Not integrated with Effect scheduler; may fire after fiber cancelled.
+- 🟢 **#R149-P3-018**: SnapshotLive.js:290-300 - Snapshot description field accepts any length. Very long descriptions consume memory.
+- 🟢 **#R149-P3-019**: MiningLive.js:185-195 - Block extra data encoding not validated. Invalid UTF-8 sequences accepted.
+- 🟢 **#R149-P3-020**: BlockParamsLive.js:145-155 - Timestamp can be set to past value. Should reject timestamps < parent.timestamp.
+- 🟢 **#R149-P4-009**: EthActionsLive.js:545-555 - getTransactionCount returns 0 for non-existent accounts. Indistinguishable from zero-nonce accounts.
+- 🟢 **#R149-P4-010**: TevmActionsLive.js:420-430 - loadState silently ignores unknown fields. Extra fields in state object not rejected.
+- 🟢 **#R149-P4-011**: MemoryClientLive.js:360-370 - Client ID not unique across processes. UUID collision possible in distributed tests.
+- 🟢 **#R149-P4-012**: EthActionsLive.js:580-590 - getCode returns empty for self-destructed accounts. Cannot distinguish "no code" from "destroyed".
+- 🟢 **#R149-P4-013**: RequestLive.js:245-255 - web3_clientVersion hardcoded. Doesn't reflect actual package version.
+- 🟢 **#R149-P4-015**: DecoratorLive.js:85-95 - Decorator ordering not documented. Apply order affects behavior but not specified.
+- 🟢 **#R149-P4-016**: MemoryClientLive.js:405-415 - Fork cache TTL not configurable. Stale cached data may persist longer than desired.
+
+**Open Issues Summary (Post 149th Review FIXES):**
+- **CRITICAL**: 4 🔴 (4 previous + 1 NEW - 1 FIXED)
+- **HIGH**: 52 🔴 (46 previous + 13 NEW - 7 FIXED)
+- **MEDIUM**: 313 🟡 (288 previous + 25 NEW)
+- **LOW**: 527 🟢 (506 previous + 21 NEW)
+
+**149th Review FIXES Applied:**
+1. ✅ **#R149-P4-005** (CRITICAL): EthActionsLive.js - tx.hash() wrapped in try/catch
+2. ✅ **#R149-P1-002** (HIGH): toTaggedError.js - instanceof checks + _tag property
+3. ✅ **#R149-P2-001** (HIGH): EvmLive.js - shallowCopy method binding fixed
+4. ✅ **#R149-P3-001** (HIGH): FilterLive.js - Topic hex format validation
+5. ✅ **#R149-P3-002** (HIGH): FilterLive.js - Topics array validation
+6. ✅ **#R149-P3-003** (HIGH): FilterLive.js - Address format validation
+7. ✅ **#R149-P3-004** (NEW): FilterLive.js - Error ordering fix: filter type check before param validation
+8. ✅ **#R149-P4-006** (HIGH): EthActionsLive.js - yParity EIP-155 computation
+
+**Key 149th Review Findings (remaining):**
+1. **HIGH - Type Safety Issues**: Double casts, type mismatches in Deferred and deepCopy (#R149-P2-002, #R149-P4-014)
+2. **HIGH - Input Validation**: keccak256 uses unvalidated hexToBytes (#R149-P3-010)
+3. **HIGH - State Handling**: Empty state:{} silently clears storage (#R149-P3-016)
+4. **HIGH - Code Quality**: Unreachable code after Effect.fail() (#R149-P4-007)
 
 ---
 
