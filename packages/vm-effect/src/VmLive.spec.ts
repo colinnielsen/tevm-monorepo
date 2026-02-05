@@ -198,8 +198,10 @@ describe('VmLive', () => {
 				expect(copy.vm).toBeDefined()
 				// Shallow copy creates a new VM instance
 				expect(copy.vm).not.toBe(vmService.vm)
-				// But shares the same stateManager (shallow copy semantics)
-				expect(copy.vm.stateManager).toBe(vmService.vm.stateManager)
+				// #R150-P2-004: shallowCopy now creates separate stateManager/blockchain instances
+				// that share underlying caches but have separate mutable state tracking
+				expect(copy.vm.stateManager).not.toBe(vmService.vm.stateManager)
+				expect(copy.vm.blockchain).not.toBe(vmService.vm.blockchain)
 				return 'shallow copied'
 			})
 

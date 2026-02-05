@@ -274,8 +274,10 @@ const createActionServices = (stateManager) => {
 				// Build the core operations that should be reverted on failure (RFC §6.3)
 				// Using Effect patterns instead of try/catch for proper error channel handling
 				const coreOperations = Effect.gen(function* () {
-					// Cast to unknown first to allow instanceof check, then use any to bypass private property mismatch
-					const account = /** @type {any} */ (new Account(params.nonce ?? 0n, params.balance ?? 0n))
+					// #R150-P4-003 fix: Use proper Account type from @ethereumjs/util instead of unsafe any cast
+					// The Account constructor from @ethereumjs/util creates an EthjsAccount which is what
+					// stateManager.putAccount() expects
+					const account = /** @type {import('@ethereumjs/util').Account} */ (new Account(params.nonce ?? 0n, params.balance ?? 0n))
 					yield* stateManager.putAccount(ethjsAddress, account).pipe(
 						Effect.mapError(
 							(e) =>

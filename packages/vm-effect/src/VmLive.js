@@ -134,15 +134,20 @@ export const VmLive = (_options = {}) => {
 						}),
 
 					// #R140-P2-004 fix: Wrap shallowCopy in Effect.try for consistent error handling
+					// #R150-P2-004 fix: Call shallowCopy on stateManager and blockchain instead of passing same references
+					// This ensures each VM instance has its own shallow-copied state with separate mutable tracking
+					// while still sharing the underlying fork cache (read-only reference data)
 					shallowCopy: () =>
 						Effect.try({
 							try: () => {
-								// shallowCopy creates a new VM sharing the same stateManager, blockchain, common, and evm
-								// Note: the shallow copy shares the same stateManager, blockchain, and common (shared mutable state)
+								// shallowCopy creates shallow copies of stateManager and blockchain
+								// The copies share underlying caches but have separate mutable state tracking
+								const copiedStateManager = vmInstance.stateManager.shallowCopy()
+								const copiedBlockchain = vmInstance.blockchain.shallowCopy()
 								const vmCopy = createVm({
 									common: vmInstance.common,
-									stateManager: vmInstance.stateManager,
-									blockchain: vmInstance.blockchain,
+									stateManager: copiedStateManager,
+									blockchain: copiedBlockchain,
 									evm: /** @type {import('@tevm/vm').CreateVmOptions['evm']} */ (vmInstance.evm),
 								})
 								return createShape(vmCopy)

@@ -172,18 +172,11 @@ export const EvmLive = (options = {}) => {
 								// The shallowCopy already creates its own properly bound methods
 								// Previously we were binding evmInstance methods to evmCopy which could
 								// cause state corruption if methods had closure references to evmInstance state
-								// If evmCopy lacks these methods, we check and only add if truly missing
-								if (typeof evmCopy.addCustomPrecompile !== 'function' && typeof evmInstance.addCustomPrecompile === 'function') {
-									// Create a wrapper that calls the copied EVM's method directly
-									evmCopy.addCustomPrecompile = function(...args) {
-										return evmInstance.addCustomPrecompile.apply(this, args)
-									}
-								}
-								if (typeof evmCopy.removeCustomPrecompile !== 'function' && typeof evmInstance.removeCustomPrecompile === 'function') {
-									evmCopy.removeCustomPrecompile = function(...args) {
-										return evmInstance.removeCustomPrecompile.apply(this, args)
-									}
-								}
+								// #R150-P2-003 fix: Removed fallback wrapper functions that were still calling
+								// evmInstance.addCustomPrecompile/removeCustomPrecompile - these wrappers
+								// called the original instance's methods, causing state mutations to affect
+								// evmInstance instead of evmCopy. The shallowCopy() from @tevm/evm should
+								// produce a properly configured copy with all necessary methods.
 								return createShape(evmCopy)
 							},
 							catch: (e) => mapEvmError(e),

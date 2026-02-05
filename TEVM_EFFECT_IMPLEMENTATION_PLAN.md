@@ -2,8 +2,23 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-05 (Post 151st Fix)
+**Last Updated**: 2026-02-05 (Post 152nd Fix)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
+
+---
+
+**152nd FIX (2026-02-05).** Fixed 3 HIGH priority issues from 150th review.
+
+**FIXED HIGH Issues (3 total):**
+- ✅ **#R150-P2-003**: FIXED - EvmLive.js shallowCopy no longer contains fallback wrapper functions that called evmInstance methods. Removed lines 176-186 that were binding methods incorrectly, causing state mutations on the original instead of the copy. The shallowCopy() from @tevm/evm now produces a properly configured copy.
+- ✅ **#R150-P2-004**: FIXED - VmLive.js shallowCopy now calls stateManager.shallowCopy() and blockchain.shallowCopy() to create separate instances that share underlying caches but have separate mutable state tracking. Previously passed same references causing shared state mutation issues.
+- ✅ **#R150-P4-003**: FIXED - MemoryClientLive.js:278 now uses proper `/** @type {import('@ethereumjs/util').Account} */` JSDoc type assertion instead of unsafe `any` cast in Account constructor.
+
+**Open Issues Summary (Post 152nd Fix):**
+- **CRITICAL**: 4 🔴 (unchanged)
+- **HIGH**: 57 🔴 (60 previous - 3 FIXED)
+- **MEDIUM**: 325 🟡 (unchanged)
+- **LOW**: 535 🟢 (unchanged)
 
 ---
 
@@ -35,13 +50,13 @@
 - ✅ **#R150-P1-001**: FIXED (151st) - LoggerTest.js:21-22 - TestLoggerShape child() return type violates LoggerShape interface (Liskov Substitution). Returns TestLoggerShape but interface requires LoggerShape. CONFIRMS #R149-P1-010.
 - ✅ **#R150-P2-001**: FIXED (151st) - HttpTransport.js:486-487 - Unsafe double type cast for Deferred. Uses `(unknown)(yield* Deferred.make())` pattern bypassing all type safety. CONFIRMS #R149-P2-002.
 - 🔴 **#R150-P2-002**: StateManagerLive.js:144-340 - Full duplicate of createShape() code from wrapStateManager.js. Violates DRY, creates maintenance burden.
-- 🔴 **#R150-P2-003**: EvmLive.js:176-186 - shallowCopy method binding potentially causes state corruption. Methods bound to evmInstance instead of evmCopy for fallback.
-- 🔴 **#R150-P2-004**: VmLive.js:137-151 - shallowCopy creates new VM instead of calling vmInstance.shallowCopy(). Internal VM state beyond passed parameters is lost.
+- ✅ **#R150-P2-003**: FIXED (152nd) - EvmLive.js:176-186 - shallowCopy method binding potentially causes state corruption. Methods bound to evmInstance instead of evmCopy for fallback.
+- ✅ **#R150-P2-004**: FIXED (152nd) - VmLive.js:137-151 - shallowCopy creates new VM instead of calling vmInstance.shallowCopy(). Internal VM state beyond passed parameters is lost.
 - 🔴 **#R150-P3-002**: FilterLive.js:385-404 - addLog validation allows malformed logs. log.address can be null despite FilterLog type requiring Hex.
 - 🔴 **#R150-P3-003**: FilterLive.js:428-452 - Topic validation allows null topics in stored logs. Per Ethereum spec, stored log topics must never be null.
 - 🔴 **#R150-P3-004**: SnapshotLive.js:275-287 - revertToSnapshot preserves target snapshot causing unbounded memory growth. No deleteSnapshot API for cleanup.
 - 🔴 **#R150-P4-002**: TevmActionsLive.js:247-253 - Unreachable code after yield* Effect.fail() in loadState. Return statement after Effect.fail() never executes. CONFIRMS #R149-P4-007.
-- 🔴 **#R150-P4-003**: MemoryClientLive.js:278 - Unsafe `any` cast in Account constructor bypasses TypeScript checking.
+- ✅ **#R150-P4-003**: FIXED (152nd) - MemoryClientLive.js:278 - Unsafe `any` cast in Account constructor bypasses TypeScript checking.
 
 **NEW MEDIUM Issues Found (12 total):**
 - 🟡 **#R150-P1-002**: LoggerService.js:54-56 - JSDoc type assertion pattern for Context.Tag bypasses inference. Should use class extension pattern.
