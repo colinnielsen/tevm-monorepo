@@ -246,6 +246,53 @@ describe('CommonFromFork', () => {
 				}
 			}
 		})
+
+		it('should return InternalError for chain IDs exceeding Number.MAX_SAFE_INTEGER', async () => {
+			// Fix for #R155-P5-002: Chain IDs above Number.MAX_SAFE_INTEGER lose precision
+			// when converted to Number, causing wrong chain identification
+			const unsafeChainId = BigInt(Number.MAX_SAFE_INTEGER) + 1n // 9007199254740992n
+
+			const program = Effect.gen(function* () {
+				const common = yield* CommonService
+				return common
+			})
+
+			const forkConfigLayer = createMockForkConfig(unsafeChainId)
+			const commonLayer = Layer.provide(CommonFromFork(), forkConfigLayer)
+			const fullLayer = Layer.merge(forkConfigLayer, commonLayer)
+
+			const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(fullLayer)))
+
+			expect(Exit.isFailure(exit)).toBe(true)
+			if (Exit.isFailure(exit)) {
+				const error = exit.cause
+				expect(error._tag).toBe('Fail')
+				if (error._tag === 'Fail') {
+					expect(error.error._tag).toBe('InternalError')
+					expect(error.error).toBeInstanceOf(InternalError)
+					expect(error.error.message).toContain('exceeds maximum safe integer')
+					expect(error.error.message).toContain(String(unsafeChainId))
+				}
+			}
+		})
+
+		it('should work with chain ID at Number.MAX_SAFE_INTEGER boundary', async () => {
+			// Chain ID exactly at the boundary should still work
+			const boundaryChainId = BigInt(Number.MAX_SAFE_INTEGER)
+
+			const program = Effect.gen(function* () {
+				const common = yield* CommonService
+				return common.chainId
+			})
+
+			const forkConfigLayer = createMockForkConfig(boundaryChainId)
+			const commonLayer = Layer.provide(CommonFromFork(), forkConfigLayer)
+			const fullLayer = Layer.merge(forkConfigLayer, commonLayer)
+
+			const result = await Effect.runPromise(program.pipe(Effect.provide(fullLayer)))
+
+			expect(result).toBe(Number.MAX_SAFE_INTEGER)
+		})
 	})
 
 	describe('optional configuration branches', () => {

@@ -77,13 +77,29 @@ export const CommonFromFork = (options = {}) => {
 		Effect.gen(function* () {
 			const forkConfig = yield* ForkConfigService
 
+			// Fix for #R155-P5-002: Validate chain ID doesn't exceed safe integer range
+			// Chain IDs above Number.MAX_SAFE_INTEGER (9007199254740991) will lose precision
+			// when converted to Number, causing wrong chain identification
+			if (forkConfig.chainId > BigInt(Number.MAX_SAFE_INTEGER)) {
+				return yield* Effect.fail(
+					new InternalError({
+						message: `Chain ID ${forkConfig.chainId} exceeds maximum safe integer (${Number.MAX_SAFE_INTEGER}). ` +
+							`Chain IDs this large cannot be safely represented as JavaScript Numbers and may cause incorrect chain identification.`,
+						cause: undefined,
+					}),
+				)
+			}
+
+			// Safe to convert to Number after validation
+			const chainIdNumber = Number(forkConfig.chainId)
+
 			// Wrap createCommon in Effect.try to capture synchronous exceptions
 			// (e.g., invalid hardfork name) in the Effect error channel
 			const common = yield* Effect.try({
 				try: () =>
 					createCommon({
 						...tevmDefault,
-						id: Number(forkConfig.chainId),
+						id: chainIdNumber,
 						hardfork,
 						eips: /** @type {number[]} */ ([...eips]),
 						...(loggingLevel !== 'silent' && { loggingLevel }),
@@ -98,7 +114,7 @@ export const CommonFromFork = (options = {}) => {
 
 			return /** @type {CommonShape} */ ({
 				common,
-				chainId: Number(forkConfig.chainId),
+				chainId: chainIdNumber,
 				hardfork,
 				eips: common.ethjsCommon.eips(),
 				copy: () => common.copy(),

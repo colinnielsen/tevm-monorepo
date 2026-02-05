@@ -20,6 +20,35 @@ import { TransportService } from './TransportService.js'
 const DEFAULT_TIMEOUT = 30000
 
 /**
+ * Global request ID counter for non-batched single requests.
+ * Uses a unique prefix based on process start time plus a monotonic counter
+ * to avoid collisions across HttpTransport instances and module reloads.
+ *
+ * Format: `${instanceId}-${counter}` where instanceId is based on high-resolution time
+ * at module load, ensuring uniqueness across module reloads.
+ *
+ * Fix for #R155-P5-001: Previously used Date.now() which could cause collisions
+ * when multiple requests occur within the same millisecond.
+ */
+const instanceId = typeof performance !== 'undefined' ? Math.floor(performance.now() * 1000000) : Date.now() * 1000000
+let singleRequestCounter = 0
+
+/**
+ * Generates a unique request ID for single (non-batched) requests.
+ * Combines module-load timestamp with monotonic counter to ensure uniqueness
+ * across transport instances and module reloads.
+ *
+ * @returns {number} A unique request ID
+ */
+const generateRequestId = () => {
+	singleRequestCounter++
+	// Use a combination that fits in a safe integer range
+	// instanceId provides uniqueness across module loads
+	// counter provides uniqueness within this module instance
+	return (instanceId % 1000000000) + singleRequestCounter
+}
+
+/**
  * A pending batch request with its deferred result
  * @typedef {Object} PendingRequest
  * @property {number} id - The JSON-RPC request id
@@ -122,7 +151,7 @@ const createSingleRequest = (config, timeout, retrySchedule) => {
 						},
 						body: JSON.stringify({
 							jsonrpc: '2.0',
-							id: Date.now(),
+							id: generateRequestId(),
 							method,
 							params: params ?? [],
 						}),

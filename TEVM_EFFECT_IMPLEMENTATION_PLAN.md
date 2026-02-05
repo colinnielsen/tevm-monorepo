@@ -2,8 +2,98 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-05 (Post 154th Fix)
+**Last Updated**: 2026-02-05 (Post 156th Fix)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
+
+---
+
+**156th FIX (2026-02-05).** Fixed all 2 CRITICAL issues from 155th review.
+
+**FIXED CRITICAL Issues (2 total):**
+- ✅ **#R155-P5-001**: FIXED - HttpTransport.js single requests now use `generateRequestId()` which combines a high-resolution module-load timestamp with a monotonic counter to ensure uniqueness across concurrent requests and transport instances. Previously used `Date.now()` which caused collisions within the same millisecond.
+- ✅ **#R155-P5-002**: FIXED - CommonFromFork.js now validates that chainId doesn't exceed `Number.MAX_SAFE_INTEGER` before conversion. If chainId is too large, returns descriptive InternalError instead of silently losing precision. Added boundary test cases.
+
+**Open Issues Summary (Post 156th Fix):**
+- **CRITICAL**: 4 🔴 (6 previous - 2 FIXED)
+- **HIGH**: 76 🔴 (unchanged)
+- **MEDIUM**: 360 🟡 (unchanged)
+- **LOW**: 577 🟢 (unchanged)
+
+---
+
+**155th REVIEW (2026-02-05).** Deep Parallel Opus 4.5 independent review with ultrathink (6 parallel subagents). Found 2 CRITICAL, 5 HIGH, 16 MEDIUM, 26 LOW = 49 NEW issues.
+
+**NEW CRITICAL Issues Found (2 total):**
+- ✅ **#R155-P5-001**: FIXED (156th) - transport-effect/HttpTransport.js:125 - JSON-RPC Request ID Collision. Uses `id++` counter starting at 0, but ID is module-scoped. Multiple HttpTransport instances share same counter, and if module is reloaded, IDs reset causing response routing failures.
+- ✅ **#R155-P5-002**: FIXED (156th) - common-effect/CommonFromFork.js:86,101 - BigInt to Number Precision Loss for Chain IDs. Uses `Number(chainId)` where chainId is BigInt. Chain IDs above Number.MAX_SAFE_INTEGER (9007199254740991) will lose precision, causing wrong chain identification.
+
+**NEW HIGH Issues Found (5 total):**
+- 🔴 **#R155-P3-001**: decorators-effect/src/decorators/estimateGasDecorator.js:256-402 - estimateGas does not use state checkpointing. Unlike eth_call (fixed in #R153-P4-002), estimateGas still executes without checkpoint/revert isolation. Gas estimation mutates shared state.
+- 🔴 **#R155-P2-001**: interop/effectToPromise.d.ts - Type definition doesn't enforce required runtime. Runtime parameter typed as optional but function throws if undefined. Type allows unsafe calls that fail at runtime.
+- 🔴 **#R155-P6-001**: memory-client-effect/MemoryClientLive.js:320-360 - Memory Leak in deepCopy. Deep-copied runtimes not tracked for cleanup. Each deepCopy creates new ManagedRuntime that persists until process exit.
+- 🔴 **#R155-P6-002**: memory-client-effect/MemoryClientLive.js:145-180 - Fork configuration options ignored. When fork options provided, several configuration options (retryCount, retryDelay, timeout) are silently dropped.
+- 🔴 **#R155-P5-003**: Multiple files - Effect.runPromise breaks fiber management. Using Effect.runPromise instead of ManagedRuntime.runPromise bypasses proper fiber lifecycle, causing resource leaks and broken interruption.
+
+**NEW MEDIUM Issues Found (16 total):**
+- 🟡 **#R155-P1-001**: errors-effect/toTaggedError.js (30 locations) - Missing message type validation. toTaggedError assumes error.message is string but could be undefined/null in edge cases, causing "undefined" in error messages.
+- 🟡 **#R155-P2-002**: interop/promiseToEffect.js:81 - Non-Promise return causes confusing errors. If wrapped function returns non-Promise, error message doesn't indicate the actual problem.
+- 🟡 **#R155-P2-003**: interop/wrapWithEffect.js:94 - Symbol-keyed methods not handled. Object.keys() doesn't include Symbol keys, so Symbol-keyed methods are silently dropped in wrap.
+- 🟡 **#R155-P2-004**: interop/promiseToEffect.js vs wrapWithEffect.js - Inconsistent error handling. promiseToEffect returns unknown error channel, wrapWithEffect catches to UnknownError. Mixed patterns confuse users.
+- 🟡 **#R155-P3-002**: decorators-effect/src/decorators/tevmCallDecorator.js:104-180 - tevm_call does not use state checkpointing. Same issue as #R155-P3-001 but for tevm_call.
+- 🟡 **#R155-P3-003**: decorators-effect/src/decorators/getTransactionCountDecorator.js:726-734 - Rejects all block tags except 'latest'. Block tags like 'pending', 'earliest', 'safe', 'finalized' all throw InvalidParamsError despite being valid per Ethereum spec.
+- 🟡 **#R155-P4-001**: actions-effect/GetAccountLive.js - Inconsistent isEmpty calculation. Uses different criteria for isEmpty in different code paths (balance/nonce/code vs account object presence).
+- 🟡 **#R155-P4-002**: actions-effect/SetAccountLive.js - storageRoot validation allows empty string. Empty string '' accepted for storageRoot but causes corrupted state.
+- 🟡 **#R155-P4-003**: actions-effect/FilterLive.js - createLogFilter accepts invalid logsCriteria. Missing validation for topics array length (max 4 per spec) and address format.
+- 🟡 **#R155-P4-004**: actions-effect/SnapshotLive.js - loadState with potentially stale state object. Snapshot state reference may be stale if modifications occur between save and load.
+- 🟡 **#R155-P5-004**: evm-effect/EvmLive.js - deepCopy accesses private/internal properties. Uses internal EVM properties that could change between ethereumjs versions.
+- 🟡 **#R155-P5-005**: evm-effect/EvmLive.js - mapEvmError has incomplete error type coverage. Some EVM error types not mapped, falling through to generic InternalError.
+- 🟡 **#R155-P5-006**: transport-effect/HttpTransport.js - Unbounded queue in batched HTTP transport. Batch queue has no size limit; flood of requests causes unbounded memory growth.
+- 🟡 **#R155-P6-003**: memory-client-effect/MemoryClientLive.js - dispose() is a no-op. dispose() method exists but doesn't actually clean up ManagedRuntime or cancel pending operations.
+- 🟡 **#R155-P6-004**: memory-client-effect/CommonCopy.js - Common copy() creates circular reference. Copying Common object creates circular reference in customCrypto back to Common instance.
+- 🟡 **#R155-P6-005**: memory-client-effect/types.js - No timeout support for long-running operations. Client operations have no configurable timeout; hung operations block forever.
+
+**NEW LOW Issues Found (26 total):**
+- 🟢 **#R155-P1-002**: errors-effect/toTaggedError.js:424 - Missing code type validation in fallback case. Fallback error code assignment doesn't validate code is number.
+- 🟢 **#R155-P1-003**: errors-effect/toTaggedError.js:272 - Unsafe blockTag type cast. Casts without validation could cause type confusion.
+- 🟢 **#R155-P1-004**: errors-effect/toTaggedError.js:172 - Dead code. ErrorClass variable assigned but never used.
+- 🟢 **#R155-P2-005**: interop/layerFromFactory.js:57-62 - Missing null/undefined validation. Factory returning null/undefined not explicitly handled.
+- 🟢 **#R155-P2-006**: interop/wrapWithEffect.js:94 - Numeric keys coerced to strings. Object.keys returns strings; numeric keys lose type information.
+- 🟢 **#R155-P2-007**: interop/wrapWithEffect.js:86-89 - Captured prototype methods not dynamically looked up. Methods captured at wrap time; later prototype modifications not reflected.
+- 🟢 **#R155-P2-008**: interop/createManagedRuntime.js:50 - No input validation. ManagedRuntime.make called without validating layer parameter.
+- 🟢 **#R155-P3-004**: decorators-effect/src/decorators/getBlockByNumberDecorator.js:404-408 - Silently returns null for invalid block tags. Should throw InvalidParamsError for unrecognized tags.
+- 🟢 **#R155-P3-005**: decorators-effect/src/decorators - Duplicate hexToBytes function definitions. hexToBytes defined in multiple decorator files with slight variations.
+- 🟢 **#R155-P3-006**: decorators-effect/src/decorators/loadStateDecorator.js:247-254 - Unreachable code. Code after return statement in loadState.
+- 🟢 **#R155-P4-005**: actions-effect - Duplicated bytesToHex, validateBlockTag, hexToBytes across files. Same utility functions copy-pasted in 6+ files.
+- 🟢 **#R155-P4-006**: actions-effect/BlockParamsLive.js - clearNextBlockOverrides no validation. Accepts any input including malformed objects.
+- 🟢 **#R155-P4-007**: actions-effect/ImpersonationLive.js - Address lowercasing not documented. Silently lowercases addresses losing EIP-55 checksum info without documentation.
+- 🟢 **#R155-P4-008**: actions-effect/FilterLive.js - toHex can produce negative hex. Negative block numbers produce invalid hex output.
+- 🟢 **#R155-P4-009**: actions-effect/SetAccountLive.js - Missing validation for empty state/stateDiff. Empty object {} treated differently than undefined.
+- 🟢 **#R155-P5-007**: Multiple core packages - Duplicate toEthjsAddress helper functions. Same helper in blockchain-effect, state-effect, evm-effect.
+- 🟢 **#R155-P5-008**: state-effect/wrapStateManager.js - Module comment is incorrect. Comment describes wrong functionality.
+- 🟢 **#R155-P5-009**: transport-effect/HttpTransport.js - Missing ForkError stack trace preservation. Original error stack not captured in ForkError.
+- 🟢 **#R155-P5-010**: blockchain-effect/iterator - Error handling uses fragile error name matching. Uses error.name === 'BlockNotFoundError' string matching instead of instanceof.
+- 🟢 **#R155-P6-006**: memory-client-effect/MemoryClientLive.js - Inconsistent error types in deepCopy. Some errors throw, others return Effect.fail; caller can't handle uniformly.
+- 🟢 **#R155-P6-007**: memory-client-effect/MemoryClientLive.js - Null vs undefined check for account properties. Uses != null which allows empty string, should be explicit.
+- 🟢 **#R155-P6-008**: memory-client-effect/validateShape.js - Shape validation doesn't check method types. Validates property existence but not that they're actually functions.
+- 🟢 **#R155-P6-009**: memory-client-effect/MemoryClientLive.js - Storage slot overflow not validated. Slot values > 256 bits accepted but corrupt state.
+- 🟢 **#R155-P6-010**: memory-client-effect/types.js - Documentation revertToSnapshot return type mismatch. JSDoc says returns boolean but type is Effect.
+- 🟢 **#R155-P6-011**: node-effect/NodeLive.js - Missing input validation on createNode. Node configuration options not validated before use.
+- 🟢 **#R155-P6-012**: vm-effect/VmLive.js - VM options shallow merged. Nested options like common.customCrypto not deep merged, causing partial configs.
+
+**Open Issues Summary (Post 155th Review):**
+- **CRITICAL**: 6 🔴 (4 previous + 2 NEW)
+- **HIGH**: 76 🔴 (71 previous + 5 NEW)
+- **MEDIUM**: 360 🟡 (344 previous + 16 NEW)
+- **LOW**: 577 🟢 (551 previous + 26 NEW)
+
+**Key 155th Review Findings:**
+1. ✅ **CRITICAL - Request ID Collision**: HttpTransport uses shared module counter causing response routing failures (#R155-P5-001) - **FIXED in 156th**
+2. ✅ **CRITICAL - Chain ID Precision**: BigInt chain IDs lose precision when converted to Number (#R155-P5-002) - **FIXED in 156th**
+3. **HIGH - Missing State Checkpointing**: estimateGas and tevm_call lack checkpoint isolation like eth_call (#R155-P3-001, #R155-P3-002)
+4. **HIGH - Memory Leaks**: deepCopy creates untracked ManagedRuntime instances (#R155-P6-001)
+5. **HIGH - Fiber Management**: Effect.runPromise used instead of ManagedRuntime breaking lifecycle (#R155-P5-003)
+6. **MEDIUM - Validation Gaps**: Multiple missing validations for storageRoot, logsCriteria, block tags (#R155-P4-001-004, #R155-P3-003)
+7. **LOW - Code Duplication**: bytesToHex, hexToBytes, toEthjsAddress duplicated across 10+ files
 
 ---
 
@@ -14,11 +104,11 @@
 - ✅ **#R153-P4-002**: FIXED - EthActionsLive.js eth_call now uses state checkpointing. Added `yield* stateManager.checkpoint()` before execution and wrapped entire call in `Effect.ensuring(stateManager.revert())` to guarantee state isolation. Concurrent eth_call invocations no longer interfere with each other.
 - ✅ **#R153-P4-003**: FIXED - EthActionsLive.js getBlockByNumber and getBlockByHash now filter null transactions. Changed `.map((tx) => safeHash(tx))` to `.map((tx) => safeHash(tx)).filter((hash) => hash !== null)` for transactions array when includeTransactions=false. Same fix applied to uncles array. Malformed transactions/uncles are now omitted entirely per JSON-RPC spec.
 
-**Open Issues Summary (Post 154th Fix):**
-- **CRITICAL**: 4 🔴 (7 previous - 3 FIXED)
-- **HIGH**: 71 🔴 (unchanged)
-- **MEDIUM**: 344 🟡 (unchanged)
-- **LOW**: 551 🟢 (unchanged)
+**Open Issues Summary (Post 154th Fix - Before 155th Review):**
+- **CRITICAL**: 4 🔴 (7 previous - 3 FIXED) → 6 after 155th review
+- **HIGH**: 71 🔴 (unchanged) → 76 after 155th review
+- **MEDIUM**: 344 🟡 (unchanged) → 360 after 155th review
+- **LOW**: 551 🟢 (unchanged) → 577 after 155th review
 
 ---
 

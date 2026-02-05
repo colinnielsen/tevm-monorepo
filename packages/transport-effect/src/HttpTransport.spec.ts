@@ -1280,4 +1280,84 @@ describe('HttpTransport', () => {
 			expect(fetchDelayComplete).toBe(true)
 		})
 	})
+
+	describe('request ID uniqueness', () => {
+		it('should generate unique request IDs for concurrent single requests (fix for #R155-P5-001)', async () => {
+			// Fix for #R155-P5-001: Previously used Date.now() which could cause collisions
+			// when multiple requests occur within the same millisecond
+			const capturedIds: number[] = []
+
+			mockFetch.mockImplementation(async (_url, options) => {
+				const body = JSON.parse(options.body)
+				capturedIds.push(body.id)
+				return {
+					ok: true,
+					json: async () => ({ jsonrpc: '2.0', id: body.id, result: '0x1' }),
+				}
+			})
+
+			// Use non-batched transport (single requests)
+			const layer = HttpTransport({
+				url: 'https://example.com',
+				retryCount: 0,
+				// No batch config = single request mode
+			})
+
+			const program = Effect.gen(function* () {
+				const transport = yield* TransportService
+				// Make multiple concurrent requests
+				return yield* Effect.all([
+					transport.request<string>('eth_chainId'),
+					transport.request<string>('eth_chainId'),
+					transport.request<string>('eth_chainId'),
+					transport.request<string>('eth_chainId'),
+					transport.request<string>('eth_chainId'),
+				])
+			})
+
+			await Effect.runPromise(program.pipe(Effect.provide(layer)))
+
+			// All IDs should be unique
+			const uniqueIds = new Set(capturedIds)
+			expect(uniqueIds.size).toBe(capturedIds.length)
+			expect(capturedIds.length).toBe(5)
+		})
+
+		it('should generate unique request IDs across multiple transport instances', async () => {
+			const capturedIds: number[] = []
+
+			mockFetch.mockImplementation(async (_url, options) => {
+				const body = JSON.parse(options.body)
+				capturedIds.push(body.id)
+				return {
+					ok: true,
+					json: async () => ({ jsonrpc: '2.0', id: body.id, result: '0x1' }),
+				}
+			})
+
+			// Create two separate transport instances
+			const layer1 = HttpTransport({ url: 'https://example1.com', retryCount: 0 })
+			const layer2 = HttpTransport({ url: 'https://example2.com', retryCount: 0 })
+
+			const program1 = Effect.gen(function* () {
+				const transport = yield* TransportService
+				return yield* transport.request<string>('eth_chainId')
+			})
+
+			const program2 = Effect.gen(function* () {
+				const transport = yield* TransportService
+				return yield* transport.request<string>('eth_chainId')
+			})
+
+			await Promise.all([
+				Effect.runPromise(program1.pipe(Effect.provide(layer1))),
+				Effect.runPromise(program2.pipe(Effect.provide(layer2))),
+			])
+
+			// All IDs should be unique even across different transport instances
+			const uniqueIds = new Set(capturedIds)
+			expect(uniqueIds.size).toBe(capturedIds.length)
+			expect(capturedIds.length).toBe(2)
+		})
+	})
 })
