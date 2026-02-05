@@ -165,9 +165,12 @@ export const SendLive = /** @type {Layer.Layer<import('./SendService.js').SendSe
 										code: getErrorCode(error),
 										message: /** @type {{ message?: string }} */ (error).message || 'Internal error',
 										// Include error data with _tag and cause for diagnostics (RFC §6.3 Pattern 3)
+										// #R153-P4-001 fix: Include raw revert data for RevertError so clients can decode custom Solidity errors
 										data: {
 											_tag: /** @type {any} */ (error)._tag,
 											...(/** @type {any} */ (error).cause && { cause: String(/** @type {any} */ (error).cause) }),
+											// Include raw revert data for RevertError (enables custom error decoding per EIP-838)
+											...(/** @type {any} */ (error)._tag === 'RevertError' && /** @type {any} */ (error).raw && { data: /** @type {any} */ (error).raw }),
 										},
 									},
 									id: request.id,
@@ -200,9 +203,12 @@ export const SendLive = /** @type {Layer.Layer<import('./SendService.js').SendSe
 												code: getErrorCode(error),
 												message: /** @type {{ message?: string }} */ (error).message || 'Internal error',
 												// Include error data with _tag and cause for diagnostics (RFC §6.3 Pattern 3)
+												// #R153-P4-001 fix: Include raw revert data for RevertError so clients can decode custom Solidity errors
 												data: {
 													_tag: /** @type {any} */ (error)._tag,
 													...(/** @type {any} */ (error).cause && { cause: String(/** @type {any} */ (error).cause) }),
+													// Include raw revert data for RevertError (enables custom error decoding per EIP-838)
+													...(/** @type {any} */ (error)._tag === 'RevertError' && /** @type {any} */ (error).raw && { data: /** @type {any} */ (error).raw }),
 												},
 											},
 											id: request.id,

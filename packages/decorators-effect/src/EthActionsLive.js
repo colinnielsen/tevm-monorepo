@@ -86,6 +86,10 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 
 			call: (params) =>
 				Effect.gen(function* () {
+					// #R153-P4-002 fix: Use state checkpointing to ensure call doesn't persist state changes
+					// eth_call is a read-only simulation that should not modify state
+					yield* stateManager.checkpoint()
+
 					// Execute call using EVM's runCall directly for simulation
 					// This doesn't require a signed transaction - it's a stateless call
 					/**
@@ -226,7 +230,11 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 					}
 
 					return bytesToHex(execResult?.returnValue ?? new Uint8Array())
-				}),
+				}).pipe(
+					// #R153-P4-002 fix: Always revert state after eth_call completes (success or failure)
+					// This ensures read-only simulation behavior per EIP-1193
+					Effect.ensuring(stateManager.revert())
+				),
 
 			chainId: () => Effect.succeed(BigInt(common.chainId)),
 
@@ -531,9 +539,11 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 								})
 							})
 							// #R149-P4-005 fix: Use safeHash to prevent crashes from malformed transactions
-							: block.transactions.map((tx) => safeHash(tx)),
+							// #R153-P4-003 fix: Filter out null values from malformed transactions
+							: block.transactions.map((tx) => safeHash(tx)).filter((hash) => hash !== null),
 						// #R149-P4-005 fix: Use safeHash for uncle hashes to prevent crashes
-						uncles: block.uncleHeaders?.map((uncle) => safeHash(uncle)) ?? [],
+						// #R153-P4-003 fix: Filter out null values from malformed uncle headers
+						uncles: (block.uncleHeaders?.map((uncle) => safeHash(uncle)) ?? []).filter((hash) => hash !== null),
 					})
 				}),
 
@@ -675,9 +685,11 @@ export const EthActionsLive = /** @type {Layer.Layer<import('./EthActionsService
 								})
 							})
 							// #R149-P4-005 fix: Use safeHash to prevent crashes from malformed transactions
-							: block.transactions.map((tx) => safeHash(tx)),
+							// #R153-P4-003 fix: Filter out null values from malformed transactions
+							: block.transactions.map((tx) => safeHash(tx)).filter((hash) => hash !== null),
 						// #R149-P4-005 fix: Use safeHash for uncle hashes to prevent crashes
-						uncles: block.uncleHeaders?.map((uncle) => safeHash(uncle)) ?? [],
+						// #R153-P4-003 fix: Filter out null values from malformed uncle headers
+						uncles: (block.uncleHeaders?.map((uncle) => safeHash(uncle)) ?? []).filter((hash) => hash !== null),
 					})
 				}),
 

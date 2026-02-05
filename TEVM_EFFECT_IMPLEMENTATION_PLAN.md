@@ -2,8 +2,100 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-05 (Post 152nd Fix)
+**Last Updated**: 2026-02-05 (Post 154th Fix)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
+
+---
+
+**154th FIX (2026-02-05).** Fixed all 3 CRITICAL issues from 153rd review.
+
+**FIXED CRITICAL Issues (3 total):**
+- ✅ **#R153-P4-001**: FIXED - SendLive.js now includes raw revert data in JSON-RPC error response. Added `...(error._tag === 'RevertError' && error.raw && { data: error.raw })` to error.data for both send() and sendBulk() methods. Clients can now decode custom Solidity errors per EIP-838.
+- ✅ **#R153-P4-002**: FIXED - EthActionsLive.js eth_call now uses state checkpointing. Added `yield* stateManager.checkpoint()` before execution and wrapped entire call in `Effect.ensuring(stateManager.revert())` to guarantee state isolation. Concurrent eth_call invocations no longer interfere with each other.
+- ✅ **#R153-P4-003**: FIXED - EthActionsLive.js getBlockByNumber and getBlockByHash now filter null transactions. Changed `.map((tx) => safeHash(tx))` to `.map((tx) => safeHash(tx)).filter((hash) => hash !== null)` for transactions array when includeTransactions=false. Same fix applied to uncles array. Malformed transactions/uncles are now omitted entirely per JSON-RPC spec.
+
+**Open Issues Summary (Post 154th Fix):**
+- **CRITICAL**: 4 🔴 (7 previous - 3 FIXED)
+- **HIGH**: 71 🔴 (unchanged)
+- **MEDIUM**: 344 🟡 (unchanged)
+- **LOW**: 551 🟢 (unchanged)
+
+---
+
+**153rd REVIEW (2026-02-05).** Deep Parallel Opus 4.5 independent review with ultrathink (4 parallel subagents). Found 3 CRITICAL, 14 HIGH, 19 MEDIUM, 16 LOW = 52 NEW issues.
+
+**NEW CRITICAL Issues Found (3 total):**
+- 🔴 **#R153-P4-001**: EthActionsLive.js:620-645 - RevertError raw data not included in JSON-RPC response. When contract reverts, the raw revert data (for decoding custom errors) is captured in RevertError but not exposed in eth_call/eth_estimateGas JSON-RPC responses. Clients cannot decode custom Solidity error reasons.
+- 🔴 **#R153-P4-002**: EthActionsLive.js:380-420 - eth_call lacks state checkpointing. Calls mutate state without checkpoint/revert isolation. Multiple concurrent eth_call invocations interfere with each other's state views.
+- 🔴 **#R153-P4-003**: EthActionsLive.js:285-320 - getBlockByNumber transactions array includes null for malformed transactions. When tx.hash() fails (already wrapped in try/catch per #R149-P4-005), the transaction is silently included as null in the response array. Per JSON-RPC spec, malformed transactions should be omitted entirely or cause block fetch to fail.
+
+**NEW HIGH Issues Found (14 total):**
+- 🔴 **#R153-P1-001**: toBaseError.js:145-165 - walk() function continues iteration on non-Error cause values. If error.cause is a string or object (not Error instance), walk() treats it as valid Error and accesses .cause property, potentially throwing or returning wrong results.
+- 🔴 **#R153-P1-002**: wrapWithEffect.js:88-112 - Sync method detection heuristic fails for async functions returning non-Promise. Methods that return thenable objects (but aren't async functions) are incorrectly treated as sync, causing Effect.sync to wrap a Promise.
+- 🔴 **#R153-P2-001**: FilterLive.js:96-105 - Filter ID generation uses Date.now() which can produce collisions. Multiple filters created in same millisecond get duplicate IDs. Should use crypto.randomUUID() or atomic counter.
+- 🔴 **#R153-P2-002**: VmLive.js:137-155 - shallowCopy shares EVM instance. While stateManager/blockchain are copied, the EVM instance itself is shared. EVM internal caches (like warm addresses) are mutated on original when copy executes.
+- 🔴 **#R153-P2-003**: transport-effect/HttpTransport.js:420-445 - Stack trace lost in ForkError conversion. Original fetch error stack trace not preserved when wrapped in ForkError. Debugging forked chain issues extremely difficult without original stack.
+- 🔴 **#R153-P2-004**: EvmLive.js:192-220 - Schedule.compose not used correctly for event emission. Effect's Schedule is used but compose semantics may cause event handlers to be called multiple times or not at all depending on retry behavior.
+- 🔴 **#R153-P3-001**: SnapshotLive.js:185-220 - shallowCopy depth insufficient for VM state. Snapshot captures VM via shallowCopy but nested EVM state (precompile results, JUMPDEST analysis cache) is shared, causing snapshot restoration to have wrong cached data.
+- 🔴 **#R153-P3-002**: SetAccountLive.js:352-380 - Initial options validation bypassed on first call. First setAccount call skips validation because options not yet initialized. Subsequent calls validate correctly.
+- 🔴 **#R153-P3-003**: GetAccountLive.js:48-72 - Initial stateManager access doesn't check initialization. First getAccount call may occur before stateManager Layer is fully composed, causing undefined access.
+- 🔴 **#R153-P4-004**: RequestLive.js:245-290 - eth_sendRawTransaction handler missing. Method listed in dispatch but implementation returns MethodNotFoundError. Critical for submitting signed transactions.
+- 🔴 **#R153-P4-005**: TevmActionsLive.js:520-545 - traceCall doesn't propagate tracer config. Custom tracer options (step, fault, result callbacks) not passed to underlying EVM execution. Trace output always uses default format.
+- 🔴 **#R153-P4-006**: MemoryClientLive.js:445-470 - Fork block validation race condition. Fork block number fetched async but not validated against chain head. Stale fork block number can be used if chain advances during client creation.
+- 🔴 **#R153-P4-007**: EthActionsLive.js:710-735 - getTransactionReceipt returns incomplete data. Receipt missing effectiveGasPrice field required by EIP-1559. Also missing type field for typed transaction receipts.
+- 🔴 **#R153-P4-008**: DecoratorLive.js:125-140 - withRetry decorator doesn't reset state between retries. If first attempt mutates client state, retry starts from corrupted state rather than original.
+
+**NEW MEDIUM Issues Found (19 total):**
+- 🟡 **#R153-P1-003**: LoggerLive.js:95-110 - Child logger level inheritance incorrect. Child logger always inherits parent level at creation time; later parent level changes not reflected.
+- 🟡 **#R153-P1-004**: effectToPromise.js:62-78 - Fiber interruption doesn't propagate AbortError. When fiber is interrupted, promise rejects with generic Error instead of AbortError, breaking AbortController patterns.
+- 🟡 **#R153-P1-005**: toTaggedError.js:280-310 - Error conversion loses Symbol properties. Tagged errors may have Symbol-keyed properties (e.g., from Effect) that are lost in conversion to BaseError.
+- 🟡 **#R153-P1-006**: wrapWithEffect.js:145-160 - Generator function methods not supported. Methods that return generators are wrapped incorrectly; yields don't propagate through Effect boundary.
+- 🟡 **#R153-P1-007**: interop/layerFromFactory.js:78-95 - Factory error type not narrowed. Factory function's thrown errors all become unknown; specific error types from factory lost.
+- 🟡 **#R153-P2-005**: BlockchainLive.js:310-330 - Block iterator doesn't handle reorg. If chain reorgs during iteration, iterator may skip blocks or return stale blocks without indication.
+- 🟡 **#R153-P2-006**: StateManagerLive.js:275-295 - Storage iteration not bounded. getContractStorage iterates all keys without limit; large contracts cause memory exhaustion.
+- 🟡 **#R153-P2-007**: EvmLive.js:255-270 - Gas metering callbacks fire synchronously. Long gas metering callback execution blocks EVM progress; should be async or scheduled.
+- 🟡 **#R153-P2-008**: transport-effect/types.js:52-68 - TransportShape.request return type loses response typing. Generic response type erased; always returns unknown requiring unsafe casts.
+- 🟡 **#R153-P3-004**: FilterLive.js:445-475 - getPendingTransactions not implemented. Method exists in FilterShape but throws NotImplementedError. Missing for pending filter functionality.
+- 🟡 **#R153-P3-005**: MiningLive.js:178-195 - setIntervalMining doesn't validate interval. Zero or negative interval accepted; causes infinite loop or timer errors.
+- 🟡 **#R153-P3-006**: CallLive.js:320-350 - State override object not validated. Arbitrary override fields accepted without schema validation; typos silently ignored.
+- 🟡 **#R153-P3-007**: BlockParamsLive.js:210-230 - setNextBlockBaseFee doesn't enforce minimum. Base fee can be set to 0 violating EIP-1559 minimum of 7 wei.
+- 🟡 **#R153-P3-008**: ImpersonationLive.js:125-140 - stopImpersonatingAll not atomic. Concurrent calls may leave partial impersonation state.
+- 🟡 **#R153-P4-009**: EthActionsLive.js:560-580 - eth_feeHistory period parameter ignored. Always returns single block history regardless of requested block count.
+- 🟡 **#R153-P4-010**: TevmActionsLive.js:485-510 - mine() doesn't respect timestamp parameter properly. Timestamp override applied but then overwritten by auto-timestamp logic.
+- 🟡 **#R153-P4-011**: MemoryClientLive.js:520-545 - Concurrent fork requests not deduplicated. Same block fetched multiple times if concurrent operations request it simultaneously.
+- 🟡 **#R153-P4-012**: RequestLive.js:410-430 - eth_newPendingTransactionFilter returns dummy filter. Filter created but never populated with pending transactions.
+- 🟡 **#R153-P4-013**: EthActionsLive.js:650-680 - eth_getStorageAt doesn't normalize position. Leading zeros in position hex affect storage slot calculation. Should normalize to consistent format.
+
+**NEW LOW Issues Found (16 total):**
+- 🟢 **#R153-P1-008**: LoggerTest.js:112-120 - Test logger retains all log entries. No limit on stored entries; long test runs accumulate unbounded memory.
+- 🟢 **#R153-P1-009**: toBaseError.js:220-235 - Error serialization omits cause chain in JSON. toJSON() doesn't recurse into cause; logging loses nested error context.
+- 🟢 **#R153-P1-010**: TevmError.js:115-125 - Error code property not standard. Uses non-standard numeric codes instead of string error codes like other libs.
+- 🟢 **#R153-P1-011**: wrapWithEffect.js:175-185 - Property descriptor not preserved. Wrapped object loses getters/setters; only values copied.
+- 🟢 **#R153-P1-012**: effectToPromise.js:95-105 - No cleanup callback support. Effect finalizers don't map to Promise cleanup; resources may leak on rejection.
+- 🟢 **#R153-P2-009**: VmLive.js:198-210 - VM events use legacy EventEmitter. Not integrated with Effect's event system; mixed paradigms complicate tracing.
+- 🟢 **#R153-P2-010**: CommonLocal.js:145-160 - Custom hardfork config not validated. Invalid hardfork names accepted; errors only at execution time.
+- 🟢 **#R153-P3-009**: SnapshotLive.js:315-330 - Snapshot description field not sanitized. Control characters in description can corrupt log output.
+- 🟢 **#R153-P3-010**: FilterLive.js:510-525 - Log filter block hash option not implemented. blockHash parameter accepted but ignored; always uses block number range.
+- 🟢 **#R153-P3-011**: MiningLive.js:245-260 - Block gas used not updated after mining. Block header shows gasUsed=0 even after executing transactions.
+- 🟢 **#R153-P3-012**: CallLive.js:385-400 - Access list output format inconsistent. Sometimes returns array of arrays, sometimes array of objects.
+- 🟢 **#R153-P4-014**: EthActionsLive.js:790-810 - eth_maxPriorityFeePerGas returns fixed 1 gwei. Should be configurable or based on pending transaction pool.
+- 🟢 **#R153-P4-015**: TevmActionsLive.js:590-610 - Contract deployment address not deterministic. CREATE2 address calculation doesn't match EVM exactly for edge cases.
+- 🟢 **#R153-P4-016**: MemoryClientLive.js:590-610 - Client extends() modifies original. Extending client mutates prototype; other references see changes.
+- 🟢 **#R153-P4-017**: RequestLive.js:470-485 - Unsupported method error message doesn't list available methods. Generic error; should help users discover valid methods.
+- 🟢 **#R153-P4-018**: DecoratorLive.js:178-195 - withCache decorator key generation weak. Uses JSON.stringify which fails for BigInt parameters; cache misses expected hits.
+
+**Open Issues Summary (Post 153rd Review - Before 154th Fix):**
+- **CRITICAL**: 7 🔴 (4 previous + 3 NEW) → 4 remaining after 154th fix
+- **HIGH**: 71 🔴 (57 previous + 14 NEW)
+- **MEDIUM**: 344 🟡 (325 previous + 19 NEW)
+- **LOW**: 551 🟢 (535 previous + 16 NEW)
+
+**Key 153rd Review Findings:**
+1. **CRITICAL - JSON-RPC Compliance**: RevertError data not exposed (#R153-P4-001), eth_call lacks checkpointing (#R153-P4-002), malformed tx handling (#R153-P4-003)
+2. **HIGH - Shallow Copy Issues**: VmLive shares EVM (#R153-P2-002), snapshot depth insufficient (#R153-P3-001)
+3. **HIGH - Missing Core Methods**: eth_sendRawTransaction not implemented (#R153-P4-004)
+4. **HIGH - Race Conditions**: Filter ID collisions (#R153-P2-001), fork block validation (#R153-P4-006)
+5. **HIGH - State Isolation**: Decorator retry doesn't reset state (#R153-P4-008), initial validation bypass (#R153-P3-002/003)
 
 ---
 
