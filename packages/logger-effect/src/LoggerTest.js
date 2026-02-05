@@ -15,10 +15,17 @@ import { LoggerService } from './LoggerService.js'
 
 /**
  * Extended LoggerShape with additional methods for test assertions.
- * Note: The `child` method returns `TestLoggerShape` (not `LoggerShape`) so child loggers
- * also have access to test-specific methods like `getLogs`, `clearLogs`, etc.
  *
- * @typedef {Omit<LoggerShape, 'child'> & {
+ * TestLoggerShape is a valid subtype of LoggerShape (Liskov Substitution Principle compliant).
+ * The `child` method returns `TestLoggerShape` instead of `LoggerShape` - this is valid because:
+ * 1. TestLoggerShape extends LoggerShape with additional test-only methods
+ * 2. Returning a more specific subtype (covariance) is always safe
+ * 3. Child loggers retain access to test methods like `getLogs`, `clearLogs`, etc.
+ *
+ * Fix for #R150-P1-001: TestLoggerShape explicitly extends LoggerShape to ensure
+ * type compatibility while providing the narrower child() return type for test ergonomics.
+ *
+ * @typedef {LoggerShape & {
  *   child: (name: string) => TestLoggerShape,
  *   getLogs: () => Effect.Effect<readonly LogEntry[], never, never>,
  *   getLogsByLevel: (level: LogSeverity) => Effect.Effect<readonly LogEntry[], never, never>,

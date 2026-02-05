@@ -48,7 +48,7 @@
  * @property {(params: import('@tevm/actions-effect').GetStorageAtParams) => import('effect').Effect.Effect<Hex, import('@tevm/errors-effect').InvalidParamsError | import('@tevm/errors-effect').InternalError, never>} getStorageAt - Get storage value
  * @property {() => import('effect').Effect.Effect<Hex, import('@tevm/errors-effect').StorageError, never>} takeSnapshot - Take state snapshot
  * @property {(snapshotId: Hex) => import('effect').Effect.Effect<void, import('@tevm/errors-effect').SnapshotNotFoundError | import('@tevm/errors-effect').StateRootNotFoundError, never>} revertToSnapshot - Revert to snapshot
- * @property {() => import('effect').Effect.Effect<MemoryClientShape, never, never>} deepCopy - Create deep copy of client
+ * @property {() => import('effect').Effect.Effect<MemoryClientShape, import('@tevm/errors-effect').InternalError | import('@tevm/vm-effect').VmError, never>} deepCopy - Create deep copy of client. May fail with InternalError if VM deepCopy fails or stateManager is undefined.
  * @property {import('effect').Effect.Effect<void, never, never>} dispose - Dispose of client resources
  */
 

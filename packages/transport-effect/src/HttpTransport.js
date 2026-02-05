@@ -483,9 +483,9 @@ export const HttpTransport = (config) => {
 						const id = yield* Ref.updateAndGet(idCounter, (n) => n + 1)
 
 						// Create deferred for this request
-						const deferred = /** @type {Deferred.Deferred<unknown, ForkError>} */ (
-							/** @type {unknown} */ (yield* Deferred.make())
-						)
+						// Fix for #R150-P2-001: Single JSDoc type assertion instead of unsafe double cast through unknown
+						/** @type {Deferred.Deferred<unknown, ForkError>} */
+						const deferred = yield* Deferred.make()
 
 						// Add to pending queue
 						/** @type {PendingRequest} */

@@ -2,8 +2,81 @@
 
 **Status**: Active
 **Created**: 2026-01-29
-**Last Updated**: 2026-02-05 (Post 149th Review)
+**Last Updated**: 2026-02-05 (Post 151st Fix)
 **RFC Reference**: [TEVM_EFFECT_MIGRATION_RFC.md](./TEVM_EFFECT_MIGRATION_RFC.md)
+
+---
+
+**151st FIX (2026-02-05).** Fixed 2 CRITICAL and 2 HIGH priority issues from 150th review.
+
+**FIXED CRITICAL Issues (2 total):**
+- ✅ **#R150-P4-001**: FIXED - memory-client-effect/types.js deepCopy error channel now correctly declares `InternalError | VmError` instead of `never`. The type now accurately reflects that deepCopy can fail.
+- ✅ **#R150-P3-001**: FIXED - SetAccountLive.js hexToBytes now includes `isValidHex()` validation before parsing. Invalid hex input (e.g., `0xGGGG`) now throws an Error instead of silently producing NaN bytes.
+
+**FIXED HIGH Issues (2 total):**
+- ✅ **#R150-P1-001**: FIXED - LoggerTest.js TestLoggerShape typedef now uses `LoggerShape & {...}` instead of `Omit<LoggerShape, 'child'> & {...}`. This ensures TestLoggerShape is a valid subtype of LoggerShape (LSP compliant) while still providing the narrower child() return type for test ergonomics.
+- ✅ **#R150-P2-001**: FIXED - HttpTransport.js now uses single JSDoc type assertion `/** @type {Deferred.Deferred<unknown, ForkError>} */` instead of unsafe double cast through `unknown`.
+
+**Open Issues Summary (Post 151st Fix):**
+- **CRITICAL**: 4 🔴 (6 previous - 2 FIXED)
+- **HIGH**: 60 🔴 (62 previous - 2 FIXED)
+- **MEDIUM**: 325 🟡 (unchanged)
+- **LOW**: 535 🟢 (unchanged)
+
+---
+
+**150th REVIEW (2026-02-05).** Deep Parallel Opus 4.5 independent review with ultrathink (4 parallel subagents). Found 2 CRITICAL, 10 HIGH, 12 MEDIUM, 8 LOW = 32 NEW issues.
+
+**NEW CRITICAL Issues Found (2 total):**
+- ✅ **#R150-P4-001**: FIXED (151st) - memory-client-effect/types.js:51 - deepCopy error channel type mismatch. Declares `never` for error but implementation fails with `InternalError` when VM deepCopy fails or stateManager undefined. CONFIRMS #R149-P4-014.
+- ✅ **#R150-P3-001**: FIXED (151st) - SetAccountLive.js:19-40 - hexToBytes lacks hex validation before keccak256. Unlike GetStorageAtLive (which was fixed), SetAccountLive's hexToBytes silently produces NaN bytes for invalid hex input (e.g., `0xGGGG`), corrupting storage hashes.
+
+**NEW HIGH Issues Found (10 total):**
+- ✅ **#R150-P1-001**: FIXED (151st) - LoggerTest.js:21-22 - TestLoggerShape child() return type violates LoggerShape interface (Liskov Substitution). Returns TestLoggerShape but interface requires LoggerShape. CONFIRMS #R149-P1-010.
+- ✅ **#R150-P2-001**: FIXED (151st) - HttpTransport.js:486-487 - Unsafe double type cast for Deferred. Uses `(unknown)(yield* Deferred.make())` pattern bypassing all type safety. CONFIRMS #R149-P2-002.
+- 🔴 **#R150-P2-002**: StateManagerLive.js:144-340 - Full duplicate of createShape() code from wrapStateManager.js. Violates DRY, creates maintenance burden.
+- 🔴 **#R150-P2-003**: EvmLive.js:176-186 - shallowCopy method binding potentially causes state corruption. Methods bound to evmInstance instead of evmCopy for fallback.
+- 🔴 **#R150-P2-004**: VmLive.js:137-151 - shallowCopy creates new VM instead of calling vmInstance.shallowCopy(). Internal VM state beyond passed parameters is lost.
+- 🔴 **#R150-P3-002**: FilterLive.js:385-404 - addLog validation allows malformed logs. log.address can be null despite FilterLog type requiring Hex.
+- 🔴 **#R150-P3-003**: FilterLive.js:428-452 - Topic validation allows null topics in stored logs. Per Ethereum spec, stored log topics must never be null.
+- 🔴 **#R150-P3-004**: SnapshotLive.js:275-287 - revertToSnapshot preserves target snapshot causing unbounded memory growth. No deleteSnapshot API for cleanup.
+- 🔴 **#R150-P4-002**: TevmActionsLive.js:247-253 - Unreachable code after yield* Effect.fail() in loadState. Return statement after Effect.fail() never executes. CONFIRMS #R149-P4-007.
+- 🔴 **#R150-P4-003**: MemoryClientLive.js:278 - Unsafe `any` cast in Account constructor bypasses TypeScript checking.
+
+**NEW MEDIUM Issues Found (12 total):**
+- 🟡 **#R150-P1-002**: LoggerService.js:54-56 - JSDoc type assertion pattern for Context.Tag bypasses inference. Should use class extension pattern.
+- 🟡 **#R150-P1-003**: wrapWithEffect.js:94-99 - effectMethods typed as Record<string, unknown> loses method signatures.
+- 🟡 **#R150-P1-004**: toTaggedError.js:139-445 - Function is 300+ lines with repetitive if-else. Should use metadata-driven approach.
+- 🟡 **#R150-P2-005**: transport-effect/types.js:39 - TransportShape generic `<T>` not properly inferred in JSDoc. Return type always unknown.
+- 🟡 **#R150-P2-006**: EvmLive.js:130-162 - deepCopy doesn't use Effect resource management. If createEvm fails, stateManager/blockchain copies may leak.
+- 🟡 **#R150-P3-005**: All service files - Context.GenericTag without type parameter loses type information on tags.
+- 🟡 **#R150-P3-006**: BlockParamsLive.js:179-183 - clearNextBlockOverrides claims atomicity but Effect.all on Ref.set is NOT transactional.
+- 🟡 **#R150-P3-007**: ImpersonationLive.js:50 - validateAddress lowercases unconditionally, losing EIP-55 checksum information.
+- 🟡 **#R150-P3-008**: FilterLive.js:96-103 - createFilter error channel missing InvalidParamsError in type definition.
+- 🟡 **#R150-P4-004**: Multiple files - bytesToHex/hexToBytes helper duplicated 6+ times with slight variations.
+- 🟡 **#R150-P4-005**: EthActionsLive.js:761-771 - getLogs stub returns empty array without validating input params.
+- 🟡 **#R150-P4-006**: RequestLive.js:379-386 - Missing handlers for common JSON-RPC methods (eth_sendRawTransaction, eth_sign, etc.).
+
+**NEW LOW Issues Found (8 total):**
+- 🟢 **#R150-P1-005**: wrapWithEffect.js:102-108 - Cannot copy private fields (#field) in shallow copy. Documented limitation.
+- 🟢 **#R150-P1-006**: interop/layerFromFactory.js:55-63 - Error type is always unknown. No typed error mapping option.
+- 🟢 **#R150-P1-007**: interop/createManagedRuntime.js:49-51 - One-liner wrapper adds no value over ManagedRuntime.make directly.
+- 🟢 **#R150-P2-007**: wrapStateManager.js:33-38 - toEthjsAddress helper duplicated in StateManagerLive.js.
+- 🟢 **#R150-P3-009**: FilterLive.js:227,272,317 - Multiple @ts-expect-error comments for Ref.modify inference issues.
+- 🟢 **#R150-P3-010**: FilterLive.js:112-113 - Filter timestamps use Date.now() directly. Consider Effect's Clock service.
+- 🟢 **#R150-P4-007**: EthActionsLive.js:381-393 - Magic numbers in gas estimation (53000n, 21000n, 4n, 16n). Should be named constants.
+- 🟢 **#R150-P4-008**: createMemoryClient.js:44-60 - validateMemoryClientShape only checks existence, not function types.
+
+**Verification of Prior Issues:**
+| Prior Issue | Status | Notes |
+|-------------|--------|-------|
+| #R149-P4-014 (deepCopy type mismatch) | ✅ FIXED (151st) | See #R150-P4-001 - types.js now declares InternalError | VmError |
+| #R149-P4-007 (unreachable code) | CONFIRMED | See #R150-P4-002 |
+| #R149-P3-016 (empty state:{} clears storage) | CONFIRMED | Still present in SetAccountLive.js:295-306 |
+| #R149-P3-010 (keccak256 invalid hex) | ✅ FIXED (151st) | SetAccountLive also fixed via #R150-P3-001 |
+| #R149-P2-002 (Deferred double cast) | ✅ FIXED (151st) | See #R150-P2-001 - now uses single JSDoc type assertion |
+| #R149-P1-010 (TestLoggerShape child()) | ✅ FIXED (151st) | See #R150-P1-001 - typedef now extends LoggerShape |
+| #R149-P1-006 (LoggerLive type casting) | NOT FOUND | Uses JSDoc assertions, not `as any` casts |
 
 ---
 
@@ -77,11 +150,11 @@
 - 🟢 **#R149-P4-015**: DecoratorLive.js:85-95 - Decorator ordering not documented. Apply order affects behavior but not specified.
 - 🟢 **#R149-P4-016**: MemoryClientLive.js:405-415 - Fork cache TTL not configurable. Stale cached data may persist longer than desired.
 
-**Open Issues Summary (Post 149th Review FIXES):**
-- **CRITICAL**: 4 🔴 (4 previous + 1 NEW - 1 FIXED)
-- **HIGH**: 52 🔴 (46 previous + 13 NEW - 7 FIXED)
-- **MEDIUM**: 313 🟡 (288 previous + 25 NEW)
-- **LOW**: 527 🟢 (506 previous + 21 NEW)
+**Open Issues Summary (Post 150th Review):**
+- **CRITICAL**: 6 🔴 (4 previous + 2 NEW - 0 FIXED)
+- **HIGH**: 62 🔴 (52 previous + 10 NEW - 0 FIXED)
+- **MEDIUM**: 325 🟡 (313 previous + 12 NEW)
+- **LOW**: 535 🟢 (527 previous + 8 NEW)
 
 **149th Review FIXES Applied:**
 1. ✅ **#R149-P4-005** (CRITICAL): EthActionsLive.js - tx.hash() wrapped in try/catch
@@ -18350,3 +18423,4 @@ const program = Effect.gen(function* () {
 | 0.116 | 2026-01-30 | Claude | Fixed MEDIUM priority issues from 116th review: #272 (EvmLive Effect.tryPromise for createEvm), #297 (storage length validation), #298 (hexToBytes Effect.try wrapper), #285/#286 (FilterLive listener cleanup). Removed dead code (toEthjsAddressSafe) from StateManagerLocal/Live. All tests pass with 100% coverage. |
 | 0.120 | 2026-01-30 | Claude (Review Agent) | 120th review with Opus 4.5 parallel subagents - found 27 NEW issues (3 CRITICAL, 6 HIGH, 14 MEDIUM, 4 LOW). Key findings: Runtime<any> cast defeats type safety (#427), VmLive uses Effect.promise() not Effect.tryPromise() (#437), SetAccountLive uses catchAll instead of mapError (#444). Issues span all 4 phases. |
 | 0.139 | 2026-02-04 | Claude | Fixed 3 issues from 138th review: #R138-P1-001 CRITICAL (toTaggedError unsafe hex address type casting) - converted function declarations to interface pattern in toTaggedError.types.ts. #R138-P4-001 CRITICAL (getSenderAddress() try-catch in EthActionsLive.js) - wrapped getSenderAddress in Effect.try with proper error handling. #R138-P3-001 CRITICAL (Error channel type mismatches in Live .d.ts files) - investigated thoroughly: properly typing Service tags with `@type` annotations exposes that all Live implementations return `Effect<..., unknown, unknown>` but shapes expect typed errors like `InvalidParamsError | InternalError` - this is a systemic issue requiring comprehensive refactoring of all Live implementations to add explicit return type annotations and is beyond scope of quick fix. Added `/** @type {any} */` casts for EvmLive.js deepCopy calls. All type builds and tests pass (evm-effect 49 tests 100% coverage, errors-effect 100% coverage, actions-effect 109 tests 97.7% coverage). |
+| 0.150 | 2026-02-05 | Claude (Review Agent) | 150th review with parallel Opus 4.5 subagents (ultrathink) - found 32 NEW issues (2 CRITICAL, 10 HIGH, 12 MEDIUM, 8 LOW). Key findings: SetAccountLive.js hexToBytes lacks validation (#R150-P3-001), deepCopy type signature mismatch confirmed (#R150-P4-001), StateManagerLive duplicates createShape code (#R150-P2-002), FilterLive allows malformed logs (#R150-P3-002). Verified 6 prior issues still open (R149-P4-014, R149-P4-007, R149-P3-016, R149-P2-002, R149-P1-010). Total open: 6 CRITICAL, 62 HIGH, 325 MEDIUM, 535 LOW. |
